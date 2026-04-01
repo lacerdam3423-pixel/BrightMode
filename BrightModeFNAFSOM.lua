@@ -9,8 +9,8 @@ local OUTDOOR = Color3.fromRGB(255, 255, 255)
 local FOG_COLOR = Color3.fromRGB(255, 255, 255)
 
 -- Suas novas configurações de Exposição (Exposure)
-local EXPOSURE_DAY = 0.05   -- Exposição durante o dia
-local EXPOSURE_NIGHT = 0.95 -- Exposição durante a noite
+local EXPOSURE_DAY = 0.01   -- Exposição durante o dia
+local EXPOSURE_NIGHT = 0.37,5 -- Exposição durante a noite
 ---------------------------------------------------------
 
 local Lighting = game:GetService("Lighting")
