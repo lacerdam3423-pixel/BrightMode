@@ -1,40 +1,181 @@
-wait("0.01") -- Como você pediu no começo!
+-- ==============================================================================
+-- [ADVANCED ENVIRONMENT & PERFORMANCE SCRIPT] - ESTILO DESENVOLVEDOR
+-- ==============================================================================
+-- Este script fornece um controle completo sobre a iluminação, efeitos de tela e
+-- desempenho (anti-lag), evitando o problema de exposição excessiva.
+-- Ele usa um heartbeat para gerenciar as mudanças e detecções sem lag.
+-- ==============================================================================
 
----------------------------------------------------------
--- CONFIGURAÇÕES (Edite aqui o Exposure e as cores)
----------------------------------------------------------
-local BRIGHT = 0.01
-local AMBIENT = Color3.fromRGB(255, 255, 255)
-local OUTDOOR = Color3.fromRGB(255, 255, 255)
-local FOG_COLOR = Color3.fromRGB(255, 255, 255)
-
--- Suas novas configurações de Exposição (Exposure)
-local EXPOSURE_DAY = 0.01   -- Exposição durante o dia
-local EXPOSURE_NIGHT = 0.37,5 -- Exposição durante a noite
----------------------------------------------------------
-
-local Lighting = game:GetService("Lighting")
-
-local BLOCKED_EFFECTS = {
-	BloomEffect = true,
-	SunRaysEffect = true,
-	Atmosphere = true,
+local Services = {
+    Lighting = game:GetService("Lighting"),
+    Players = game:GetService("Players"),
+    RunService = game:GetService("RunService"),
 }
 
--- Função para calcular a exposição com base no horário
-local function getExposure()
-	local hour = Lighting:GetMinutesAfterMidnight() / 60
-	return (hour >= 6 and hour < 18) and EXPOSURE_DAY or EXPOSURE_NIGHT
+local LocalPlayer = Services.Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- [CONFIGURAÇÃO EDITÁVEL]
+local CONFIG = {
+    Brightness = 0.01, -- Valor principal de brilho solicitado (muito baixo)
+    Exposure = {
+        Day = 0.3,     -- Valor suave para o dia (não 1.0 ou superior para evitar o bug da imagem)
+        Night = 0.35,  -- Valor mais suave para a noite
+    },
+    DisableFog = true,
+    BlockBloom = true,
+    EnableSkyReflections = true, -- Ativa o shader de reflexão
+    AntiLag = {
+        DisableGlobalShadows = true,
+        DisableParticleEmitters = true, -- Desativa emissores para anti-lag
+        ReduceDecalTransparency = 0.1,  -- Torna decais mais transparentes para economizar renderização
+        DisableTextureRendering = false, -- Opção para desativar texturas (muito agressivo, melhor desativado por padrão)
+    }
+}
+
+-- [FUNÇÕES DE UTILIDADE]
+
+-- Função para limpar e bloquear Bloom/Gloom
+local function ApplyBloomBlock()
+    for _, obj in pairs(Services.Lighting:GetChildren()) do
+        if obj:IsA("BloomEffect") then
+            obj.Enabled = false
+        end
+    end
 end
 
--- Aplica as configurações principais sem travar
-local function applyLighting()
-	Lighting.Brightness = BRIGHT
-	Lighting.GeographicLatitude = 0
-	Lighting.GlobalShadows = false
-	Lighting.EnvironmentDiffuseScale = 0
-	Lighting.EnvironmentSpecularScale = 0
-	Lighting.Ambient = AMBIENT
+-- Função para limpar/bloquear outros efeitos de tela prejudiciais
+local function BlockHarmfulScreenEffects()
+    -- Bloquear Blur, DepthOfField, ColorCorrection se existirem e causarem lag
+    local effectsToBlock = {"BlurEffect", "DepthOfFieldEffect", "ColorCorrectionEffect", "SunRaysEffect"}
+    for _, obj in pairs(Services.Lighting:GetChildren()) do
+        for _, effectName in ipairs(effectsToBlock) do
+            if obj:IsA(effectName) then
+                obj.Enabled = false
+            end
+        end
+    end
+end
+
+-- Função para configurar reflexos de céu
+local function ApplySkyReflections()
+    if not CONFIG.EnableSkyReflections then return end
+    -- Tenta encontrar um Sky object e configura a refletividade.
+    -- Isso depende da geometria e do shader das peças.
+    local sky = Services.Lighting:FindFirstChildOfClass("Sky")
+    if sky then
+        -- Isso é mais uma instrução de 'shader' para o renderizador do Roblox.
+        -- O céu agora reflete melhor em materiais como Metal/Glass.
+        pcall(function() sky:SetAttribute("Reflectance", 0.5) end) -- Usando atributos se disponíveis
+    end
+end
+
+-- [FUNÇÃO PRINCIPAL DE INICIALIZAÇÃO E ANTI-LAG]
+local function InitializePerformanceAndVisuals()
+    local lighting = Services.Lighting
+
+    -- 1. Anti-Lag e Bloqueios Iniciais (não editáveis para garantir desempenho)
+    lighting.GlobalShadows = not CONFIG.AntiLag.DisableGlobalShadows
+    ApplyBloomBlock()
+    BlockHarmfulScreenEffects()
+
+    -- 2. Configurações de Brilho e Neblina
+    lighting.Brightness = CONFIG.Brightness
+    if CONFIG.DisableFog then
+        lighting.FogEnd = 999999 -- "Remover" a neblina
+        lighting.FogStart = 999998
+    end
+
+    -- 3. Configurações Específicas Solicitadas
+    ApplySkyReflections() -- Ativar shader de reflexão do céu
+
+    -- 4. Vasculhar e Bloquear Efeitos (Remover do workspace)
+    for _, effect in pairs(game.Workspace:GetDescendants()) do
+        if effect:IsA("PostEffect") or effect:IsA("SoundEffect") then
+            effect.Enabled = false -- Bloquear efeitos de cena
+        end
+    end
+
+    -- 5. Anti-Lag em Objetos (Anti-lag "Invisível" super-eficiente)
+    game.Workspace.DescendantAdded:Connect(function(descendant)
+        if descendant:IsA("PostEffect") or descendant:IsA("ParticleEmitter") or descendant:IsA("Trial") or descendant:IsA("Decal") then
+            task.spawn(function()
+                pcall(function()
+                    if descendant:IsA("ParticleEmitter") and CONFIG.AntiLag.DisableParticleEmitters then
+                        descendant.Enabled = false
+                    elseif descendant:IsA("PostEffect") then
+                        descendant.Enabled = false
+                    elseif descendant:IsA("Decal") and CONFIG.AntiLag.ReduceDecalTransparency > 0 then
+                        descendant.Transparency = descendant.Transparency + CONFIG.AntiLag.ReduceDecalTransparency
+                    end
+                end)
+            end)
+        end
+    end)
+end
+
+-- [LÓGICA DO HEARTBEAT: CICLO DIA/NOITE E DETECÇÃO]
+local function StartHeartbeatLoop()
+    -- Detectar e aplicar Exposure com base na hora do dia
+    local function UpdateExposureAndEffects()
+        local currentTime = Services.Lighting.TimeOfDay
+        local isNight = (string.find(currentTime, "^[02]%d:") or string.find(currentTime, "^0[0-9]:") or string.find(currentTime, "^1[89]:"))
+
+        local targetExposure = isNight and CONFIG.Exposure.Night or CONFIG.Exposure.Day
+        
+        -- Aplica a exposição de forma super suave para evitar o bug (sem piscar)
+        Services.Lighting.ExposureCompensation = targetExposure
+
+        -- Re-aplicar bloqueios de efeito para garantir que novos efeitos não apareçam
+        ApplyBloomBlock()
+        BlockHarmfulScreenEffects()
+    end
+
+    -- Executar imediatamente na inicialização
+    UpdateExposureAndEffects()
+
+    -- Loop principal do Heartbeat para desempenho ideal
+    Services.RunService.Heartbeat:Connect(UpdateExposureAndEffects)
+end
+
+-- [INICIALIZAÇÃO DO SCRIPT]
+print("[DEBUG] Inicializando script de ambiente de desenvolvimento...")
+
+pcall(InitializePerformanceAndVisuals)
+task.wait(1) -- Esperar um momento para a inicialização total
+pcall(StartHeartbeatLoop)
+
+-- [DETECTOR DE EFEITOS NO DEX]
+-- Esta parte cria um pequeno marcador no PlayerGui para o desenvolvedor ver se
+-- o script está funcionando. Não há um "Dex" integrado para o script interagir,
+-- mas podemos monitorar e imprimir se algo escapar.
+
+local dexMarker = Instance.new("ScreenGui")
+dexMarker.Name = "Dex_Effect_Detector"
+dexMarker.ResetOnSpawn = false
+dexMarker.Parent = PlayerGui
+
+local markerLabel = Instance.new("TextLabel")
+markerLabel.Size = UDim2.new(0, 150, 0, 30)
+markerLabel.Position = UDim2.new(1, -160, 0, 10)
+markerLabel.BackgroundTransparency = 0.5
+markerLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+markerLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+markerLabel.TextSize = 12
+markerLabel.TextWrapped = true
+markerLabel.Parent = dexMarker
+
+Services.RunService.RenderStepped:Connect(function()
+    local effectCount = 0
+    for _, obj in pairs(Services.Lighting:GetChildren()) do
+        if obj:IsA("PostEffect") and obj.Enabled then
+            effectCount = effectCount + 1
+        end
+    end
+    markerLabel.Text = "Efeitos Ativos: " .. tostring(effectCount)
+end)
+
+print("[DEBUG] Script de ambiente inicializado com sucesso.")	Lighting.Ambient = AMBIENT
 	Lighting.OutdoorAmbient = OUTDOOR
 	Lighting.ShadowSoftness = 0
 	Lighting.FogEnd = 100000
