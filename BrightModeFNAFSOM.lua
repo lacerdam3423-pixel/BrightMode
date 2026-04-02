@@ -154,7 +154,7 @@ local function InitializeUPBM()
 
     -- 4. Configuração Base da Iluminação
     Lighting.FogEnd = 9e9
-    Lighting.FogStart = 9e9
+    Lighting.FogStart = 9e5
     Lighting.Brightness = U_P_BM_CONFIG.BRIGHTNESS_BASE
     Lighting.GlobalShadows = false
 
