@@ -7,8 +7,8 @@
 local U_P_BM_CONFIG = {
     ENABLED = true,
     BRIGHTNESS_BASE = 0.01, 
-    EXPOSURE_DAY = 1.0,    
-    EXPOSURE_NIGHT = 2.0,  
+    EXPOSURE_DAY = 0.3,    
+    EXPOSURE_NIGHT = 0.37,  
     OUTDOOR_AMBIENT = Color3.fromRGB(200, 200, 200), 
     ANTI_LAG_LEVEL = 3, -- 0-Off, 1-Leve, 2-Médio, 3-Agressivo
 }
