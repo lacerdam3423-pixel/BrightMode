@@ -20,7 +20,7 @@ end
 local function aplicarLuz()
     local hora = Lighting.ClockTime
     
-    Lighting.FogEnd = 1000000
+    Lighting.FogEnd = 100000
     Lighting.FogStart = 0
     Lighting.GlobalShadows = false
     Lighting.Brightness = 0 -- Mantido em 0 conforme seu pedido anterior
@@ -29,7 +29,7 @@ local function aplicarLuz()
     
     if hora >= 17.5 or hora <= 6.5 then
         -- NOITE
-        Lighting.ExposureCompensation = 0.55
+        Lighting.ExposureCompensation = 0.75
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
         Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     else
