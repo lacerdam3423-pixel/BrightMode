@@ -1,61 +1,78 @@
-local Lighting = game:GetService("Lighting")
+-- Espera o jogo carregar um pouco para evitar falhas na execução
+task.wait(0.1)
 
--- 1. CONFIGURAÇÕES FIXAS (Roda só uma vez para máxima performance)
-Lighting.GlobalShadows = false
-Lighting.FogEnd = 100000
-Lighting.Brightness = 0 -- Mantém o Brightness zerado como pedido
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
+local UserGameSettings = UserSettings():GetService("UserGameSettings")
+
+-- 1. NOTIFICAÇÃO DE SUCESSO
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "MigMax Fullbright",
+        Text = "Script carregado com sucesso! Sem sombras e com FPS otimizado.",
+        Icon = "rbxassetid://6031075938",
+        Duration = 6
+    })
+end)
+
+-- 2. CONFIGURAÇÕES FIXAS (Roda só uma vez para não dar lag)
+Lighting.FogEnd = 1000000
+Lighting.FogStart = 0
+Lighting.Brightness = 0 -- Mantido em 0 conforme seu pedido anterior
+Lighting.GlobalShadows = false -- Desativado para não travar celulares fracos
 
 if Lighting:FindFirstChildOfClass("Atmosphere") then
     Lighting:FindFirstChildOfClass("Atmosphere"):Destroy()
 end
 
--- 2. FUNÇÃO LEVE DE MUDANÇA (Baseada apenas em Exposure)
+-- Tenta forçar a qualidade de renderização no motor do Roblox de forma segura
+pcall(function()
+    UserGameSettings.SavedQualityLevel = Enum.SavedQualityLevel.QualityLevel10
+end)
+
+-- 3. FUNÇÃO DE ILUMINAÇÃO (Baseada em Exposure)
 local function aplicarLuz()
     local hora = Lighting.ClockTime
     
     Lighting.GlobalShadows = false
-    Lighting.Brightness = 0 -- Garante que continue em zero
+    Lighting.Brightness = 0
     
     if hora >= 17.5 or hora <= 6.5 then
         -- NOITE (Mais clara por Exposure)
-        Lighting.ExposureCompensation = 0.75
+        Lighting.ExposureCompensation = 0.55
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
         Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     else
         -- DIA (Iluminado mas sem estourar)
-        Lighting.ExposureCompensation = 0.37
+        Lighting.ExposureCompensation = 0.25
         Lighting.Ambient = Color3.fromRGB(200, 200, 200)
         Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
     end
 end
 
--- 3. DETECTOR DE MUDANÇA (Super leve, não trava)
+-- Detector de mudança de horário (Super leve)
 Lighting:GetPropertyChangedSignal("ClockTime"):Connect(aplicarLuz)
-
--- Executa uma vez no início
 aplicarLuz()
 
--- 4. REMOÇÃO DE LUZES, SOMBRAS E TEXTURAS (Otimização Extrema)
+-- 4. REMOÇÃO DE LUZES, SOMBRAS E TEXTURAS (Para garantir o FPS)
 local function otimizarObjeto(obj)
-    -- Remove Luzes
     if obj:IsA("Light") then
         obj.Enabled = false
-    -- Remove Sombras e desliga o Neon
     elseif obj:IsA("BasePart") then
         obj.CastShadow = false
         if obj.Material == Enum.Material.Neon then
             obj.Material = Enum.Material.Plastic
         end
-    -- Remove Texturas e Decals para dar muito mais FPS
     elseif obj:IsA("Texture") or obj:IsA("Decal") then
         obj:Destroy()
     end
 end
 
--- Limpa o que já está no mapa ao ligar o script
+-- Limpa o mapa atual
 for _, item in ipairs(game.Workspace:GetDescendants()) do
     otimizarObjeto(item)
 end
 
--- Limpa tudo o que for adicionado depois (sem lag)
+-- Limpa o que for adicionado depois
 game.Workspace.DescendantAdded:Connect(otimizarObjeto)
