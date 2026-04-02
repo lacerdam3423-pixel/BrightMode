@@ -5,8 +5,8 @@ local Workspace = game:GetService("Workspace")
 
 local SISTEMA_ATIVADO = true
 local BRILHO_BASE = 0.01
-local EXPOSICAO_DIA = 1.0
-local EXPOSICAO_NOITE = 2.0
+local EXPOSICAO_DIA = 0.2,5
+local EXPOSICAO_NOITE = 0.37
 local AMBIENTE_EXTERNO = Color3.fromRGB(200, 200, 200)
 local NIVEL_ANTI_LAG = 3
 
