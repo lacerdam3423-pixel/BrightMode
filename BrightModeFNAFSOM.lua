@@ -10,7 +10,7 @@ local U_P_BM_CONFIG = {
     EXPOSURE_DAY = 0.3,    
     EXPOSURE_NIGHT = 0.37,  
     OUTDOOR_AMBIENT = Color3.fromRGB(200, 200, 200), 
-    ANTI_LAG_LEVEL = 3, -- 0-Off, 1-Leve, 2-Médio, 3-Agressivo
+    ANTI_LAG_LEVEL = 0, -- 0-Off, 1-Leve, 2-Médio, 3-Agressivo
 }
 
 local Lighting = game:GetService("Lighting")
