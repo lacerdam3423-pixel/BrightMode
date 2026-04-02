@@ -1,24 +1,28 @@
+wait("0.01")
 --[=[
-    DEVELOPER TOOL: ULTRA_PERFORMANCE_BRIGHT_MODE (U_P_BM) v1.2
-    DESCRIÇÃO: Iluminação forçada e desempenho extremo sem interferência em GUIs ou ferramentas de terceiros (Dex).
-    FOCO: Zero bugs, zero lags induzidos, compatibilidade mobile (Delta, Fluxus, etc).
+    DEVELOPER TOOL: ULTRA_BRIGHT_EXPOSURE_SYSTEM v1.2
+    DESCRICAO: Sistema de iluminação universal focado em brilho e visibilidade.
+    FUNCIONALIDADES: Bright Mode estável, No-Fog, Exposição Automática Dinâmica, Mantém Nuvens e Céu.
+    MODIFICAÇÕES: Anti-lag agressivo removido para manter a fidelidade visual do mapa.
 ]=]
 
+-- [[ CONFIGURAÇÃO DO DESENVOLVEDOR ]]
 local U_P_BM_CONFIG = {
     ENABLED = true,
-    BRIGHTNESS_BASE = 0.01, 
-    EXPOSURE_DAY = 0.56,    
-    EXPOSURE_NIGHT = 1.0,  
+    BRIGHTNESS_BASE = 0, -- Zerado para a exposição dominar perfeitamente
+    EXPOSURE_DAY = 0.3,    
+    EXPOSURE_NIGHT = 0.37,  
     OUTDOOR_AMBIENT = Color3.fromRGB(200, 200, 200), 
-    ANTI_LAG_LEVEL = 0, -- 0-Off, 1-Leve, 2-Médio, 3-Agressivo
+    HEARTBEAT_SAFE = true, 
 }
 
+-- [[ VARIÁVEIS DO SISTEMA ]]
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 local isInitialized = false
 local currentUpdateSignal
 
+-- [[ SISTEMA DE LOGGING ]]
 local function DLog(message, isError)
     local prefix = "[U_P_BM]"
     if isError then
@@ -28,13 +32,77 @@ local function DLog(message, isError)
     end
 end
 
--- [[ SISTEMA DE OTIMIZAÇÃO INDIVIDUAL (Sem loops pesados) ]]
-local function OptimizeObject(obj)
-    if not U_P_BM_CONFIG.ENABLED then return end
+-- [[ SISTEMA DE ILUMINAÇÃO REFINADO (NO-LAG BRIGHT MODE) ]]
+local function InitializeRefinedLighting()
+    DLog("Inicializando Bright Mode com Céu e Nuvens do Jogo.")
+
+    -- Configuração Base de Limpeza
+    Lighting.FogEnd = 9e9 -- Remove Neblina
+    Lighting.FogStart = 9e9
+    Lighting.Brightness = U_P_BM_CONFIG.BRIGHTNESS_BASE
+    Lighting.GlobalShadows = false -- Remove Sombras de tudo
+    Lighting.EnvironmentDiffuseScale = 0 
+    Lighting.EnvironmentSpecularScale = 0 
+
+    -- Lógica RenderStepped para Iluminação Estável
+    if U_P_BM_CONFIG.HEARTBEAT_SAFE then
+        if currentUpdateSignal then currentUpdateSignal:Disconnect() end
+        
+        currentUpdateSignal = RunService.RenderStepped:Connect(function()
+            if not U_P_BM_CONFIG.ENABLED then 
+                if currentUpdateSignal then currentUpdateSignal:Disconnect() end
+                return 
+            end
+
+            -- Verifica se é dia ou noite baseado no relógio do jogo
+            local isDay = Lighting.ClockTime >= 6 and Lighting.ClockTime < 18
+            local targetExposure = isDay and U_P_BM_CONFIG.EXPOSURE_DAY or U_P_BM_CONFIG.EXPOSURE_NIGHT
+            
+            -- Força a exposição correta
+            if Lighting.ExposureCompensation ~= targetExposure then
+                Lighting.ExposureCompensation = targetExposure
+            end
+            
+            -- Força o ambiente claro
+            if Lighting.OutdoorAmbient ~= U_P_BM_CONFIG.OUTDOOR_AMBIENT then
+                Lighting.OutdoorAmbient = U_P_BM_CONFIG.OUTDOOR_AMBIENT
+            end
+
+            -- Garante que as sombras fiquem sempre desligadas
+            if Lighting.GlobalShadows then
+                Lighting.GlobalShadows = false
+            end
+        end)
+    end
+end
+
+-- [[ INICIALIZAÇÃO DO SCRIPT ]]
+local function InitializeUPBM()
+    if isInitialized then return end
+    isInitialized = true
     
-    -- Ignora efeitos dentro de GUIs para não quebrar menus e ferramentas como o Dex
-    if obj:IsDescendantOf(game:GetService("CoreGui")) or obj:IsA("GuiMain") or obj:IsA("ScreenGui") then
-        return
+    DLog("Script de Iluminação Limpo Inicializando...")
+    
+    pcall(InitializeRefinedLighting)
+
+    DLog("Sistema Totalmente Funcional Carregado com Sucesso.")
+end
+
+InitializeUPBM()
+
+return {
+    Disable = function()
+        U_P_BM_CONFIG.ENABLED = false
+        if currentUpdateSignal then currentUpdateSignal:Disconnect() end
+        DLog("Sistema Desativado.")
+    end,
+    Enable = function()
+        if not U_P_BM_CONFIG.ENABLED then
+            U_P_BM_CONFIG.ENABLED = true
+            InitializeUPBM()
+        end
+    end
+    }        return
     end
 
     local level = U_P_BM_CONFIG.ANTI_LAG_LEVEL
