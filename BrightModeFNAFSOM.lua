@@ -1,42 +1,33 @@
--- Espera o jogo carregar um pouco para evitar falhas na execução
 task.wait(0.1)
-
-local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
-local UserGameSettings = UserSettings():GetService("UserGameSettings")
+local settings = settings()
+local Rendering = settings.Rendering
 
--- 1. NOTIFICAÇÃO DE SUCESSO
-pcall(function()
-    StarterGui:SetCore("SendNotification", {
-        Title = "MigMax Fullbright",
-        Text = "Script carregado com sucesso! Sem sombras e com FPS otimizado.",
-        Icon = "rbxassetid://6031075938",
-        Duration = 6
-    })
-end)
-
--- 2. CONFIGURAÇÕES FIXAS (Roda só uma vez para não dar lag)
+-- 1. CONFIGURAÇÕES FIXAS (Roda só uma vez para não travar o celular)
 Lighting.FogEnd = 1000000
 Lighting.FogStart = 0
-Lighting.Brightness = 0 -- Mantido em 0 conforme seu pedido anterior
-Lighting.GlobalShadows = false -- Desativado para não travar celulares fracos
+Lighting.Brightness = 0 -- Mantido em 0 como você pediu no anterior
+Lighting.GlobalShadows = false -- Sombras desligadas para evitar lag extremo
+Lighting.EnvironmentDiffuseScale = 1
+Lighting.EnvironmentSpecularScale = 1
+
+-- Força o motor gráfico a renderizar melhor sem precisar de loop infinito
+pcall(function()
+    Rendering.QualityLevel = Enum.QualityLevel.Level21
+    Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level21
+end)
 
 if Lighting:FindFirstChildOfClass("Atmosphere") then
     Lighting:FindFirstChildOfClass("Atmosphere"):Destroy()
 end
 
--- Tenta forçar a qualidade de renderização no motor do Roblox de forma segura
-pcall(function()
-    UserGameSettings.SavedQualityLevel = Enum.SavedQualityLevel.QualityLevel10
-end)
-
--- 3. FUNÇÃO DE ILUMINAÇÃO (Baseada em Exposure)
+-- 2. FUNÇÃO DE ILUMINAÇÃO (Exposure control)
 local function aplicarLuz()
     local hora = Lighting.ClockTime
     
     Lighting.GlobalShadows = false
-    Lighting.Brightness = 0
+    Lighting.Brightness = 0 -- Garante que continue em zero
     
     if hora >= 17.5 or hora <= 6.5 then
         -- NOITE (Mais clara por Exposure)
@@ -44,18 +35,18 @@ local function aplicarLuz()
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
         Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     else
-        -- DIA (Iluminado mas sem estourar)
+        -- DIA (Iluminado)
         Lighting.ExposureCompensation = 0.25
         Lighting.Ambient = Color3.fromRGB(200, 200, 200)
         Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
     end
 end
 
--- Detector de mudança de horário (Super leve)
+-- Detecta mudança de horário
 Lighting:GetPropertyChangedSignal("ClockTime"):Connect(aplicarLuz)
 aplicarLuz()
 
--- 4. REMOÇÃO DE LUZES, SOMBRAS E TEXTURAS (Para garantir o FPS)
+-- 3. REMOÇÃO DE TEXTURAS E SOMBRAS (Para rodar liso)
 local function otimizarObjeto(obj)
     if obj:IsA("Light") then
         obj.Enabled = false
@@ -65,14 +56,24 @@ local function otimizarObjeto(obj)
             obj.Material = Enum.Material.Plastic
         end
     elseif obj:IsA("Texture") or obj:IsA("Decal") then
-        obj:Destroy()
+        obj:Destroy() -- Remove as texturas pesadas conectadas
     end
 end
 
--- Limpa o mapa atual
+-- Varredura inicial limpa
 for _, item in ipairs(game.Workspace:GetDescendants()) do
     otimizarObjeto(item)
 end
 
--- Limpa o que for adicionado depois
+-- Monitora novos objetos sem causar lag
 game.Workspace.DescendantAdded:Connect(otimizarObjeto)
+
+-- 4. NOTIFICAÇÃO DE SUCESSO
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Script Carregado!",
+        Text = "Iluminação e otimização aplicadas com sucesso.",
+        Icon = "rbxassetid://6031075938",
+        Duration = 6
+    })
+end)
