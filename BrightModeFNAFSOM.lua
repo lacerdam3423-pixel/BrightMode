@@ -4,8 +4,8 @@ local Workspace = game:GetService("Workspace")
 
 local SISTEMA_ATIVADO = true
 local BRILHO_BASE = 0.01
-local EXPOSICAO_DIA = 1.0
-local EXPOSICAO_NOITE = 2.0
+local EXPOSICAO_DIA = 0.3
+local EXPOSICAO_NOITE = 0.37
 local AMBIENTE_EXTERNO = Color3.fromRGB(200, 200, 200)
 local NIVEL_ANTI_LAG = 3
 
@@ -14,10 +14,6 @@ local function AplicarUltraAntiLag()
 
     local function OtimizarObjetos(objeto)
         for _, descendente in ipairs(objeto:GetDescendants()) do
-            if descendente:IsA("GuiObject") or descendente:IsA("LayerCollector") then
-                continue
-            end
-
             if descendente:IsA("PostEffect") then
                 descendente.Enabled = false
             elseif descendente:IsA("SurfaceLight") or descendente:IsA("PointLight") or descendente:IsA("SpotLight") then
@@ -49,10 +45,6 @@ end
 
 local function InicializarBloqueadorDeEfeitos()
     local function BloquearEfeito(efeito)
-        if efeito:IsA("GuiObject") or efeito:IsA("LayerCollector") then
-            return
-        end
-
         if efeito:IsA("PostEffect") or efeito:IsA("Light") then
             efeito.Enabled = false
             pcall(function()
@@ -105,11 +97,12 @@ local function InicializarIluminacaoRefinada()
             Lighting.GlobalShadows = false
         end
 
+        if Lighting.FogEnd ~= 999999 then
+            Lighting.FogEnd = 999999
+            Lighting.FogStart = 0
+        end
+
         for _, objeto in ipairs(Workspace:GetDescendants()) do
-            if objeto:IsA("GuiObject") or objeto:IsA("LayerCollector") then
-                continue
-            end
-            
             if objeto:IsA("Light") and objeto.Shadows == true then
                 objeto.Shadows = false
             end
