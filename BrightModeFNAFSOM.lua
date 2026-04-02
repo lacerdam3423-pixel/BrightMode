@@ -18,12 +18,12 @@ local function aplicarLuz()
     
     if hora >= 17.5 or hora <= 6.5 then
         -- NOITE (Mais clara por Exposure)
-        Lighting.ExposureCompensation = 0.55
+        Lighting.ExposureCompensation = 0.75
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
         Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     else
         -- DIA (Iluminado mas sem estourar)
-        Lighting.ExposureCompensation = 0.25
+        Lighting.ExposureCompensation = 0.37
         Lighting.Ambient = Color3.fromRGB(200, 200, 200)
         Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
     end
