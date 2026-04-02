@@ -15,28 +15,25 @@ local function aplicarLuz()
     Lighting.GlobalShadows = false
     
     if hora >= 17.5 or hora <= 6.5 then
-        -- NOITE (Bright Mode)
-        Lighting.Brightness = 2
+        -- NOITE (Modo Claro via Exposição)
+        Lighting.ExposureCompensation = 0.55 -- Aumenta a exposição para clarear a noite
         Lighting.Ambient = Color3.fromRGB(200, 200, 200)
         Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
     else
         -- DIA (Normal do jogo, apenas sem sombras)
-        -- Resetamos para o padrão para não estourar o brilho
-        Lighting.Brightness = 1
+        Lighting.ExposureCompensation = 0.25 -- Volta para a exposição padrão do jogo
         Lighting.Ambient = Color3.fromRGB(127, 127, 127)
         Lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
     end
 end
 
--- 3. DETECTOR DE MUDANÇA (Sem loop de 1s para não travar)
--- Ele só roda o código quando a hora do jogo realmente muda
+-- 3. DETECTOR DE MUDANÇA (Roda apenas quando o tempo muda)
 Lighting:GetPropertyChangedSignal("ClockTime"):Connect(aplicarLuz)
 
 -- Executa uma vez no início
 aplicarLuz()
 
 -- 4. REMOÇÃO DE LUZES (Otimizada: Apenas quando algo novo aparece)
--- Isso evita o loop que causa o lag do vídeo
 game.Workspace.DescendantAdded:Connect(function(obj)
     if obj:IsA("Light") then
         obj.Enabled = false
