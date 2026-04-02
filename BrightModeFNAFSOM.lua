@@ -1,58 +1,60 @@
 local Lighting = game:GetService("Lighting")
-local Players = game:GetService("Players")
 
--- 1. CONFIGURAÇÕES DE ILUMINAÇÃO (Conforme seu pedido)
+-- 1. STREAMING MODE E OTIMIZAÇÃO DE RENDER (Ativação leve e permanente)
+settings().Rendering.QualityLevel = 1 -- Força gráficos no mínimo para ganhar FPS
+workspace.StreamingEnabled = true -- Garante o Streaming habilitado para não pesar a memória RAM
+
+-- 2. CONFIGURAÇÕES FIXAS DE ILUMINAÇÃO (Sem quebrar o script antigo)
 Lighting.GlobalShadows = false
 Lighting.FogEnd = 100000
-Lighting.Brightness = 0 -- Brilho sempre em 0
+Lighting.Brightness = 0 -- Mantém o Brightness zerado conforme pedido anterior
 
 if Lighting:FindFirstChildOfClass("Atmosphere") then
     Lighting:FindFirstChildOfClass("Atmosphere"):Destroy()
 end
 
--- 2. FUNÇÃO LEVE DE MUDANÇA DE HORÁRIO (Apenas Exposure)
+-- Bloqueia efeitos chatos de tela que dão lag (Blur, Bloom, etc.)
+for _, effect in ipairs(Lighting:GetChildren()) do
+    if effect:IsA("PostEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("BlurEffect") then
+        effect.Enabled = false
+    end
+end
+
+-- 3. FUNÇÃO DE BRILHO POR EXPOSURE (Dia 0.25 / Noite 0.55)
 local function aplicarLuz()
+    local hora = Lighting.ClockTime
+    
     Lighting.GlobalShadows = false
     Lighting.Brightness = 0
     
-    local hora = Lighting.ClockTime
     if hora >= 17.5 or hora <= 6.5 then
-        -- NOITE
+        -- NOITE (Claro por Exposure)
         Lighting.ExposureCompensation = 0.55
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
         Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     else
-        -- DIA
+        -- DIA (Iluminado sem estourar)
         Lighting.ExposureCompensation = 0.25
         Lighting.Ambient = Color3.fromRGB(200, 200, 200)
         Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
     end
 end
 
--- Detector de mudança de hora
 Lighting:GetPropertyChangedSignal("ClockTime"):Connect(aplicarLuz)
-aplicarLuz() -- Roda uma vez no início
+aplicarLuz()
 
--- 3. FUNÇÃO DE OTIMIZAÇÃO DE OBJETOS (Filtra Players e Rostos)
-local function otimizarObjeto(obj)
-    -- IGNORA TUDO QUE FOR DO PLAYER (Rostos, roupas, etc.)
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character and obj:IsDescendantOf(player.Character) then
-            return
-        end
-    end
-    
-    -- Ignora rostos/decals que pareçam ser de personagens ou imagens importantes
-    if obj:IsA("Decal") and (obj.Name == "face" or obj.Parent:IsA("Accessory")) then
-        return
+-- 4. REMOÇÃO DE SOMBRAS E LUZES (Sem mexer em rostos, players ou texturas)
+local function otimizarInstancia(obj)
+    -- Ignora COMPLETAMENTE os Players para não quebrar animações ou rostos
+    if obj:IsA("Player") or obj:FindFirstAncestorOfClass("Player") or obj:FindFirstAncestor("Humanoid") then
+        return 
     end
 
-    -- DESLIGA LUZES E SHADERS MANUAIS
+    -- Desliga luzes do mapa (Evita lag de GPU no Granny)
     if obj:IsA("Light") then
         obj.Enabled = false
-    elseif obj:IsA("Highlight") then
-        obj:Destroy() -- Remove shaders/contornos pesados
-    -- REMOVE SOMBRAS E TRATA O NEON
+        
+    -- Tira sombras dos blocos e remove o brilho do Neon sem quebrar a textura
     elseif obj:IsA("BasePart") then
         obj.CastShadow = false
         if obj.Material == Enum.Material.Neon then
@@ -61,28 +63,10 @@ local function otimizarObjeto(obj)
     end
 end
 
--- 4. VARREDURA INICIAL SEGURA (Não dá crash no carregamento)
--- Processa em blocos para celulares fracos não congelarem
-local itens = game.Workspace:GetDescendants()
-local contador = 0
-
-for i = 1, #itens do
-    local item = itens[i]
-    pcall(function()
-        otimizarObjeto(item)
-    end)
-    
-    contador = contador + 1
-    if contador >= 300 then -- A cada 300 objetos ele pausa um pouquinho
-        task.wait()
-        contador = 0
-    end
+-- Aplica no que já existe
+for _, item in ipairs(workspace:GetDescendants()) do
+    otimizarInstancia(item)
 end
 
--- 5. STREAMING MODE E ADIÇÕES FUTURAS
--- Mantém a limpeza ativa sem travar para o que carregar depois
-game.Workspace.DescendantAdded:Connect(function(obj)
-    pcall(function()
-        otimizarObjeto(obj)
-    end)
-end)
+-- Monitora novos objetos sem causar travamentos
+workspace.DescendantAdded:Connect(otimizarInstancia)
