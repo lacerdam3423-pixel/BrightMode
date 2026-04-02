@@ -1,78 +1,89 @@
 task.wait(0.1)
+
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
+local Players = game:GetService("Players")
 local settings = settings()
 local Rendering = settings.Rendering
 
--- 1. CONFIGURAÇÕES FIXAS (Roda só uma vez para não travar o celular)
-Lighting.FogEnd = 1000000
-Lighting.FogStart = 0
-Lighting.Brightness = 0 -- Mantido em 0 como você pediu no anterior
-Lighting.GlobalShadows = false -- Sombras desligadas para evitar lag extremo
-Lighting.EnvironmentDiffuseScale = 1
-Lighting.EnvironmentSpecularScale = 1
-
--- Força o motor gráfico a renderizar melhor sem precisar de loop infinito
-pcall(function()
-    Rendering.QualityLevel = Enum.QualityLevel.Level21
-    Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level21
-end)
-
-if Lighting:FindFirstChildOfClass("Atmosphere") then
-    Lighting:FindFirstChildOfClass("Atmosphere"):Destroy()
+-- 1. CONFIGURAÇÕES DE GRÁFICOS NO MÁXIMO (Sem travar o processador)
+local function aplicarGraficosMaximos()
+    pcall(function()
+        Rendering.QualityLevel = Enum.QualityLevel.Level21
+        Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level21
+        -- Ativa o modo de carregamento contínuo para não dar tela de carregamento longa
+        workspace.StreamingEnabled = true 
+    end)
 end
 
--- 2. FUNÇÃO DE ILUMINAÇÃO (Exposure control)
+-- 2. ILUMINAÇÃO SEM SOMBRAS E CLARA (Seu pedido original)
 local function aplicarLuz()
     local hora = Lighting.ClockTime
     
+    Lighting.FogEnd = 1000000
+    Lighting.FogStart = 0
     Lighting.GlobalShadows = false
-    Lighting.Brightness = 0 -- Garante que continue em zero
+    Lighting.Brightness = 0 -- Mantido em 0 conforme seu pedido anterior
+    Lighting.EnvironmentDiffuseScale = 1
+    Lighting.EnvironmentSpecularScale = 1
     
     if hora >= 17.5 or hora <= 6.5 then
-        -- NOITE (Mais clara por Exposure)
+        -- NOITE
         Lighting.ExposureCompensation = 0.55
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
         Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     else
-        -- DIA (Iluminado)
+        -- DIA
         Lighting.ExposureCompensation = 0.25
         Lighting.Ambient = Color3.fromRGB(200, 200, 200)
         Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
     end
 end
 
--- Detecta mudança de horário
-Lighting:GetPropertyChangedSignal("ClockTime"):Connect(aplicarLuz)
-aplicarLuz()
-
--- 3. REMOÇÃO DE TEXTURAS E SOMBRAS (Para rodar liso)
+-- 3. REMOÇÃO DE TEXTURAS (Sem mexer nos players e rostos)
 local function otimizarObjeto(obj)
+    -- Ignora completamente se o objeto for parte de um jogador
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character and obj:IsDescendantOf(player.Character) then
+            return 
+        end
+    end
+
+    -- Remove Luzes espalhadas
     if obj:IsA("Light") then
         obj.Enabled = false
+    -- Remove Sombras e desliga o Neon do mapa
     elseif obj:IsA("BasePart") then
         obj.CastShadow = false
         if obj.Material == Enum.Material.Neon then
             obj.Material = Enum.Material.Plastic
         end
-    elseif obj:IsA("Texture") or obj:IsA("Decal") then
-        obj:Destroy() -- Remove as texturas pesadas conectadas
+    -- Remove Texturas do mapa (Ignora rostos)
+    elseif obj:IsA("Texture") or (obj:IsA("Decal") and obj.Name ~= "face" and obj.Name ~= "Face") then
+        obj:Destroy()
     end
 end
 
--- Varredura inicial limpa
-for _, item in ipairs(game.Workspace:GetDescendants()) do
+-- 4. EXECUÇÃO ÚNICA (Sem loops infinitos para não dar crash)
+aplicarGraficosMaximos()
+aplicarLuz()
+
+-- Limpa o mapa atual
+for _, item in ipairs(workspace:GetDescendants()) do
     otimizarObjeto(item)
 end
 
--- Monitora novos objetos sem causar lag
-game.Workspace.DescendantAdded:Connect(otimizarObjeto)
+-- Limpa itens novos que spawnarem
+workspace.DescendantAdded:Connect(otimizarObjeto)
 
--- 4. NOTIFICAÇÃO DE SUCESSO
+-- Atualiza a luz se o tempo passar (sem travar)
+Lighting:GetPropertyChangedSignal("ClockTime"):Connect(aplicarLuz)
+
+-- 5. NOTIFICAÇÃO DE SUCESSO
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "Script Carregado!",
-        Text = "Iluminação e otimização aplicadas com sucesso.",
+        Title = "By MigMax ;]",
+        Text = "Híbrido Ultra + Anti-Lag Carregado!",
         Icon = "rbxassetid://6031075938",
         Duration = 6
     })
