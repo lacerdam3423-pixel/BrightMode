@@ -1,4 +1,4 @@
-wait("0.01")
+wait("0.00,1")
 --[=[
     DEVELOPER TOOL: ULTRA_BRIGHT_EXPOSURE_SYSTEM v1.2
     DESCRICAO: Sistema de iluminação universal focado em brilho e visibilidade.
