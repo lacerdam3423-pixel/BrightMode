@@ -1,6 +1,7 @@
 -- =============================================
 -- LOAD FAST + ANTILAG + STREAMING FORTE - MOBILE
--- Carrega mapa rápido (1000 studs), decals visíveis, ultra detalhes sem travar
+-- Carrega mapa rápido (1000 studs) + Decals visíveis + Ultra detalhes
+-- Sem interferir em nenhuma GUI ou tela do jogo
 -- =============================================
 
 local ContentProvider = game:GetService("ContentProvider")
@@ -13,31 +14,30 @@ local UserSettings = game:GetService("UserSettings")
 
 local player = Players.LocalPlayer
 
--- Só roda em mobile (conforme solicitado)
+-- Só roda em mobile
 if not UserInputService.TouchEnabled or UserInputService.KeyboardEnabled then return end
 
 -- =============================================
--- 1. FORÇAR QUALIDADE MÁXIMA VISUAL + ANTILAG (parece gráfico 5, roda como 1)
+-- 1. FORÇAR QUALIDADE VISUAL ALTA + ANTILAG (parece gráfico 5, roda leve)
 -- =============================================
 local function forceUltraQuality()
     pcall(function()
         local gameSettings = UserSettings:GetService("UserGameSettings")
         gameSettings.GraphicsMode = Enum.GraphicsMode.Manual
-        gameSettings.QualityLevel = 21  -- Qualidade máxima permitida
+        gameSettings.QualityLevel = 21
     end)
 end
 
--- Streaming forte e permanente (carrega tudo rápido em 1000 studs)
 Workspace.StreamingEnabled = true
 
 -- =============================================
--- 2. ILUMINAÇÃO OTIMIZADA (mantém o que você pediu + correções)
+-- 2. ILUMINAÇÃO OTIMIZADA (sem quebrar nada)
 -- =============================================
 Lighting.GlobalShadows = false
 Lighting.FogEnd = 100000
 Lighting.Brightness = 0
 
--- Remove efeitos que causam lag
+-- Remove apenas efeitos de post-processing que causam lag
 for _, effect in ipairs(Lighting:GetChildren()) do
     if effect:IsA("PostEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("BlurEffect") or effect:IsA("Atmosphere") then
         effect:Destroy()
@@ -50,12 +50,10 @@ local function aplicarLuz()
     Lighting.Brightness = 0
 
     if hora >= 17.5 or hora <= 6.5 then
-        -- Noite
         Lighting.ExposureCompensation = 0.55
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
         Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     else
-        -- Dia
         Lighting.ExposureCompensation = 0.25
         Lighting.Ambient = Color3.fromRGB(200, 200, 200)
         Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
@@ -66,10 +64,13 @@ Lighting:GetPropertyChangedSignal("ClockTime"):Connect(aplicarLuz)
 aplicarLuz()
 
 -- =============================================
--- 3. OTIMIZAÇÃO DE PARTES (sem quebrar players, rostos ou texturas)
+-- 3. OTIMIZAÇÃO DO MAPA (ignora totalmente Players, Humanoid, GUIs e telas)
 -- =============================================
 local function otimizarInstancia(obj)
-    if obj:IsA("Player") or obj:FindFirstAncestorOfClass("Player") or obj:FindFirstAncestor("Humanoid") then
+    -- Proteção total contra GUIs, telas e interfaces
+    if obj:IsA("GuiObject") or obj:IsA("ScreenGui") or obj:IsA("SurfaceGui") or 
+       obj:IsA("BillboardGui") or obj:FindFirstAncestorWhichIsA("GuiBase") or
+       obj:FindFirstAncestorOfClass("Player") or obj:FindFirstAncestor("Humanoid") then
         return
     end
 
@@ -83,16 +84,16 @@ local function otimizarInstancia(obj)
     end
 end
 
--- Aplica em tudo que já existe
+-- Aplica no que já existe
 for _, item in ipairs(Workspace:GetDescendants()) do
     otimizarInstancia(item)
 end
 
--- Monitora novos objetos (leve, sem lag)
+-- Monitora novos objetos sem lag
 Workspace.DescendantAdded:Connect(otimizarInstancia)
 
 -- =============================================
--- 4. MOSTRAR DECALS E TEXTURAS ESCONDIDAS + CARREGAMENTO RÁPIDO
+-- 4. MOSTRAR DECALS E TEXTURAS ESCONDIDAS + PRELOAD RÁPIDO (1000 studs)
 -- =============================================
 local function showAllHiddenDecals()
     pcall(function()
@@ -106,7 +107,8 @@ local function showAllHiddenDecals()
 end
 
 local function preloadMapFast()
-    local character = player.Character or player.CharacterAdded:Wait()
+    local character = player.Character
+    if not character then return end
     local root = character:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
@@ -141,16 +143,16 @@ local function permanentStrongStreaming()
                     player:RequestStreamAroundAsync(root.Position, 1000)
                 end)
             end
-            task.wait(3)  -- Intervalo seguro para não causar lag
+            task.wait(3)
         end
     end)
 end
 
--- Heartbeat vazio e limpo (sem piscar ou travar)
+-- Heartbeat limpo (sem piscar ou travar)
 RunService.Heartbeat:Connect(function() end)
 
 -- =============================================
--- 6. FPS MÁXIMO + EXECUÇÃO INICIAL
+-- 6. FPS MÁXIMO + INICIALIZAÇÃO
 -- =============================================
 pcall(function()
     setfpscap(300)
@@ -161,14 +163,14 @@ showAllHiddenDecals()
 preloadMapFast()
 permanentStrongStreaming()
 
--- Recarrega quando o personagem respawna
+-- Recarrega ao respawnar
 player.CharacterAdded:Connect(function()
     task.wait(1)
     preloadMapFast()
     showAllHiddenDecals()
 end)
 
--- Boost final de performance
+-- Configuração final de performance
 pcall(function()
-    settings().Rendering.QualityLevel = 1  -- Base baixa para FPS, mas com overrides visuais acima
+    settings().Rendering.QualityLevel = 1
 end)
