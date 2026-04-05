@@ -2,37 +2,36 @@ if not game:IsLoaded() then game.Loaded:Wait() end
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 
 -- =========================
--- SAVE SYSTEM (JSON)
+-- ESTADOS
 -- =========================
-local FILE = "fullbright_configs.json"
+local STATE = {
+	FullBright = false,
+	RemoveLights = false,
+	NoFog = false,
+	Exposure = false,
+	CleanVisual = false,
+	FastLoad = false
+}
 
-local function loadConfigs()
-	if isfile and isfile(FILE) then
-		return HttpService:JSONDecode(readfile(FILE))
-	end
-	return {}
+-- =========================
+-- FUNÇÕES
+-- =========================
+local function applyFullBright()
+	Lighting.GlobalShadows = false
+	Lighting.Brightness = 0
+	Lighting.Ambient = Color3.fromRGB(255,255,255)
+	Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255)
 end
 
-local function saveConfigs(tbl)
-	if writefile then
-		writefile(FILE, HttpService:JSONEncode(tbl))
-	end
-end
-
-local configs = loadConfigs()
-
--- =========================
--- FUNÇÕES BASE
--- =========================
 local function removeFog()
-	Lighting.FogStart = 0
-	Lighting.FogEnd = 999999
+	Lighting.FogStart = 1e9
+	Lighting.FogEnd = 1e9
 end
 
 local function removeLights(obj)
@@ -41,165 +40,142 @@ local function removeLights(obj)
 	end
 end
 
-local function applyFullBrightBasic()
-	Lighting.Brightness = 0
-	Lighting.GlobalShadows = false
-	Lighting.Ambient = Color3.new(1,1,1)
-	Lighting.OutdoorAmbient = Color3.new(1,1,1)
+local function cleanVisual(obj)
+	if obj:IsA("BasePart") then
+		obj.CastShadow = false
+		obj.Reflectance = 0
+	end
 end
 
-local function applyExposure(dayExp, nightExp)
-	RunService.RenderStepped:Connect(function()
-		local t = Lighting.ClockTime
-		if t >= 6 and t <= 18 then
-			Lighting.ExposureCompensation = dayExp
-		else
-			Lighting.ExposureCompensation = nightExp
-		end
+local function fastLoad()
+	pcall(function()
+		settings().Rendering.QualityLevel = Enum.QualityLevel.Level21
 	end)
 end
 
-local function cleanMap()
-	for _,v in ipairs(workspace:GetDescendants()) do
-		removeLights(v)
-		if v:IsA("BasePart") then
-			v.CastShadow = false
-		end
+-- =========================
+-- EXPOSURE DINÂMICO
+-- =========================
+local function updateExposure()
+	if not STATE.Exposure then return end
+	
+	local t = Lighting.ClockTime
+	
+	if t >= 6 and t <= 18 then
+		Lighting.ExposureCompensation = 0.10
+	else
+		Lighting.ExposureCompensation = 0.25
+	end
+end
+
+RunService.RenderStepped:Connect(updateExposure)
+
+-- =========================
+-- LOOP DE ATUALIZAÇÃO
+-- =========================
+RunService.Heartbeat:Connect(function()
+	if STATE.FullBright then
+		applyFullBright()
 	end
 	
-	workspace.DescendantAdded:Connect(removeLights)
-end
-
--- =========================
--- MODES
--- =========================
-local function modeOld()
-	removeFog()
-	applyFullBrightBasic()
-	cleanMap()
-end
-
-local function modeNew()
-	removeFog()
-	applyFullBrightBasic()
-	cleanMap()
+	if STATE.NoFog then
+		removeFog()
+	end
 	
-	applyExposure(0.10, 0.25)
-	
-	Lighting.Technology = Enum.Technology.Compatibility
-	Lighting.ShadowSoftness = 0
-end
+	if STATE.FastLoad then
+		fastLoad()
+	end
+end)
+
+Workspace.DescendantAdded:Connect(function(obj)
+	if STATE.RemoveLights then removeLights(obj) end
+	if STATE.CleanVisual then cleanVisual(obj) end
+end)
 
 -- =========================
--- GUI
+-- GUI HUB
 -- =========================
-local gui = Instance.new("ScreenGui", game.CoreGui)
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "FullBrightHub"
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,300,0,300)
-frame.Position = UDim2.new(0.5,-150,0.5,-150)
+frame.Size = UDim2.new(0, 260, 0, 320)
+frame.Position = UDim2.new(0.5, -130, 0.5, -160)
 frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.Active = true
+frame.Draggable = true
 
 local function createButton(text, y, callback)
 	local btn = Instance.new("TextButton", frame)
-	btn.Size = UDim2.new(1,-20,0,40)
-	btn.Position = UDim2.new(0,10,0,y)
+	btn.Size = UDim2.new(1, -20, 0, 30)
+	btn.Position = UDim2.new(0, 10, 0, y)
 	btn.Text = text
 	btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
 	btn.TextColor3 = Color3.new(1,1,1)
 	
 	btn.MouseButton1Click:Connect(callback)
+	return btn
 end
 
 -- =========================
 -- BOTÕES PRINCIPAIS
 -- =========================
-createButton("OLD (FullBright simples)", 20, function()
-	modeOld()
+createButton("OLD MODE", 20, function()
+	STATE.FullBright = true
+	STATE.RemoveLights = false
+	STATE.NoFog = false
+	STATE.Exposure = false
+	STATE.CleanVisual = false
+	STATE.FastLoad = false
 end)
 
-createButton("NEW (Full completo)", 70, function()
-	modeNew()
+createButton("NEW MODE", 60, function()
+	STATE.FullBright = true
+	STATE.RemoveLights = true
+	STATE.NoFog = true
+	STATE.Exposure = true
+	STATE.CleanVisual = true
+	STATE.FastLoad = true
 end)
 
 -- =========================
--- CUSTOM CREATOR
+-- CUSTOM MODE
 -- =========================
-createButton("CUSTOM CREATOR", 120, function()
-	frame:ClearAllChildren()
-	
-	local toggles = {
-		Fog = true,
-		Lights = true,
-		Shadows = true
-	}
-	
-	local y = 10
-	
-	for name,_ in pairs(toggles) do
-		local btn = Instance.new("TextButton", frame)
-		btn.Size = UDim2.new(1,-20,0,30)
-		btn.Position = UDim2.new(0,10,0,y)
-		btn.Text = name..": ON"
-		btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-		
-		btn.MouseButton1Click:Connect(function()
-			toggles[name] = not toggles[name]
-			btn.Text = name..": "..(toggles[name] and "ON" or "OFF")
-		end)
-		
-		y = y + 35
-	end
-	
-	-- SALVAR
-	local saveBtn = Instance.new("TextButton", frame)
-	saveBtn.Size = UDim2.new(1,-20,0,40)
-	saveBtn.Position = UDim2.new(0,10,0,y)
-	saveBtn.Text = "SALVAR CONFIG"
-	
-	saveBtn.MouseButton1Click:Connect(function()
-		local name = "Config_"..os.time()
-		
-		configs[name] = {
-			toggles = toggles,
-			time = os.date("%H:%M:%S")
-		}
-		
-		saveConfigs(configs)
-	end)
-	
-	y = y + 50
-	
-	-- LOAD SAVES
-	for name,data in pairs(configs) do
-		local btn = Instance.new("TextButton", frame)
-		btn.Size = UDim2.new(1,-20,0,30)
-		btn.Position = UDim2.new(0,10,0,y)
-		btn.Text = name.." ["..data.time.."]"
-		
-		btn.MouseButton1Click:Connect(function()
-			if data.toggles.Fog then removeFog() end
-			if data.toggles.Lights then cleanMap() end
-			if data.toggles.Shadows then
-				Lighting.GlobalShadows = false
-			end
-		end)
-		
-		y = y + 35
+local y = 120
+
+local function toggle(name)
+	STATE[name] = not STATE[name]
+end
+
+createButton("Toggle FullBright", y, function() toggle("FullBright") end)
+y = y + 35
+
+createButton("Toggle Remove Lights", y, function() toggle("RemoveLights") end)
+y = y + 35
+
+createButton("Toggle No Fog", y, function() toggle("NoFog") end)
+y = y + 35
+
+createButton("Toggle Exposure", y, function() toggle("Exposure") end)
+y = y + 35
+
+createButton("Toggle Clean Visual", y, function() toggle("CleanVisual") end)
+y = y + 35
+
+createButton("Toggle Fast Load", y, function() toggle("FastLoad") end)
+
+-- =========================
+-- MINIMIZAR
+-- =========================
+local mini = false
+
+createButton("Minimizar", 280, function()
+	mini = not mini
+	for _,v in ipairs(frame:GetChildren()) do
+		if v:IsA("TextButton") and v.Text ~= "Minimizar" then
+			v.Visible = not mini
+		end
 	end
 end)
 
--- =========================
--- RENOMEAR CONFIG (extra)
--- =========================
-createButton("RENOMEAR CONFIG", 170, function()
-	for name,_ in pairs(configs) do
-		local newName = name.."_edit"
-		configs[newName] = configs[name]
-		configs[name] = nil
-	end
-	saveConfigs(configs)
-end)
-
-print("FullBright Hub carregado!")
+print("FullBright HUB carregado!")
