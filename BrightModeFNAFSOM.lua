@@ -8,10 +8,10 @@ local AMBIENT_CLR    = Color3.fromRGB(200, 200, 200) -- "200"
 local OUTDOOR_CLR    = Color3.fromRGB(220, 220, 220)
 
 -- Brightness dia 0.55 / noite 1
-local BRIGHTNESS_DAY  = 0.01
-local BRIGHTNESS_NIGHT = 0.01
-local EXPOSURE_DAY    = 0.01
-local EXPOSURE_NIGHT  = 1
+local BRIGHTNESS_DAY  = 0
+local BRIGHTNESS_NIGHT = 0
+local EXPOSURE_DAY    = 0
+local EXPOSURE_NIGHT  = 0
 
 --== Desativa TODOS os tipos de luz ==--
 local function disableAllLights(parent)
