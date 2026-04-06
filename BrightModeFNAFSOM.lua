@@ -4,8 +4,8 @@ local Lighting   = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local Workspace  = game:GetService("Workspace")
 
-local AMBIENT_CLR    = Color3.fromRGB(200, 200, 200) -- "200"
-local OUTDOOR_CLR    = Color3.fromRGB(220, 220, 220)
+local AMBIENT_CLR    = Color3.fromRGB(255, 255, 255) -- "200"
+local OUTDOOR_CLR    = Color3.fromRGB(255, 255, 255)
 
 -- Brightness dia 0.55 / noite 1
 local BRIGHTNESS_DAY  = 0
