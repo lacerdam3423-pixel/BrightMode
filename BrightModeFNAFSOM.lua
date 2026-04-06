@@ -1,41 +1,41 @@
---== FullBright + Zero Shadows + Decal Reveal (LuaU) ==--
+--== FullBright (sem luz física) + Zero Sombras + Decal Reveal ==--
+--> Ilumina tudo, sem nenhuma luz, mantendo ciclos
 
 local Lighting   = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local Workspace  = game:GetService("Workspace")
 
-local AMBIENT_CLR    = Color3.fromRGB(200, 200, 200) -- seu "200"
+local AMBIENT_CLR    = Color3.fromRGB(200, 200, 200) -- "200" ambiente
 local OUTDOOR_CLR    = Color3.fromRGB(220, 220, 220)
 
--- Brightness e Exposure por dia/noite
-local BRIGHTNESS_DAY  = 0.27
-local BRIGHTNESS_NIGHT = 0.55-- igual ao dia se quiser sempre "claro"
-local EXPOSURE_DAY    = 0.27
-local EXPOSURE_NIGHT  = 0.55
+-- Brightness e Exposure (sem luz, tudo via Lighting)
+local BRIGHTNESS_DAY  = 0.55 -- seu valor
+local BRIGHTNESS_NIGHT = 1.0
+local EXPOSURE_DAY    = 0.55
+local EXPOSURE_NIGHT  = 1.0
 
 --== Funções ==--
 
--- FullBright + limpeza
-local function applyFullBright()
+-- FullBright + sem luz nenhuma
+local function applyFullBrightNoLights()
     Lighting.Brightness               = BRIGHTNESS_DAY
     Lighting.ExposureCompensation     = EXPOSURE_DAY
     Lighting.GlobalShadows            = false      -- zero sombras
     Lighting.ShadowSoftness           = 0          -- sem suavização
     Lighting.Ambient                  = AMBIENT_CLR
     Lighting.OutdoorAmbient           = OUTDOOR_CLR
-    Lighting.ClockTime                = Lighting.ClockTime
     Lighting.FogEnd                   = 999999
     Lighting.FogStart                 = 0
     Lighting.FogColor                 = Color3.new(0.9, 0.9, 0.9)
 
-    -- remove Atmosphere se existir
+    -- remove Atmosphere se tiver
     if Lighting:FindFirstChild("Atmosphere") then
         Lighting.Atmosphere:Destroy()
     end
 end
 
--- Desativa todas as Point/Surface/SpotLight
-local function disableLights(parent)
+-- Desativa todas as luzes físicas (Point/Surface/Spot)
+local function disableAllLights(parent)
     for _, child in parent:GetChildren() do
         if
             child:IsA("PointLight")    or
@@ -45,7 +45,7 @@ local function disableLights(parent)
             child.Enabled = false
         end
         if child:IsA("Model") or child:IsA("BasePart") then
-            disableLights(child)
+            disableAllLights(child)
         end
     end
 end
@@ -63,7 +63,7 @@ local function trackLights()
     end)
 end
 
--- Reveal Decal transparente (Antilag-style, só para o cliente)
+-- Revealer de Decals transparentes (Antilag‑style)
 local function revealTransparentDecals()
     for _, decal in Workspace:GetDescendants() do
         if
@@ -71,13 +71,12 @@ local function revealTransparentDecals()
             decal.Transparency == 1 and
             decal.Texture ~= ""
         then
-            decal.LocalTransparencyModifier = 0 -- força visibilidade
-            decal.Texture = decal.Texture -- atualiza a render
+            decal.LocalTransparencyModifier = 0 -- mostra
         end
     end
 end
 
--- Monitora novos Decals para revelar
+-- Monitora novos Decals transparentes
 local function trackTransparentDecals()
     Workspace.DescendantAdded:Connect(function(descendant)
         if
@@ -86,14 +85,14 @@ local function trackTransparentDecals()
             descendant.Texture ~= ""
         then
             spawn(function()
-                wait(0.1) -- pequeno delay para garantir carga
+                wait(0.1) -- espera carregar
                 descendant.LocalTransparencyModifier = 0
             end)
         end
     end)
 end
 
--- Mantém o FullBright sempre ativo, mesmo com ciclos
+-- Mantém tudo iluminado, sem luz, dia e noite
 RunService:BindToRenderStep("FullBrightUpdater", Enum.RenderPriority.Camera.Value, function()
     local hour = Lighting.ClockTime
     local isDay = hour >= 6 and hour <= 18
@@ -107,13 +106,13 @@ RunService:BindToRenderStep("FullBrightUpdater", Enum.RenderPriority.Camera.Valu
     Lighting.ShadowSoftness         = 0
     Lighting.Ambient                = AMBIENT_CLR
     Lighting.OutdoorAmbient         = OUTDOOR_CLR
-    Lighting.FogEnd                 = 999999
+    Lighting.FogEnd                 = 99999
     Lighting.FogStart               = 0
 end)
 
---== Executa na inicialização ==--
-applyFullBright()
-disableLights(Workspace)
+--== Execução ==--
+applyFullBrightNoLights()
+disableAllLights(Workspace)
 trackLights()
 revealTransparentDecals()
 trackTransparentDecals()
