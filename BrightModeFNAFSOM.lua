@@ -1,33 +1,33 @@
---== FullBright total sem nenhuma luz física ==--
---> tudo iluminado, sem PointLight, SurfaceLight, SpotLight, ArcLight, etc.
+--== FullBright + TODOS Lights Bloqueados + Antilag quase invisível ==--
 
 local Lighting   = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local Workspace  = game:GetService("Workspace")
 
-local AMBIENT_CLR    = Color3.fromRGB(200, 200, 200) -- "200" ambiente
+local AMBIENT_CLR    = Color3.fromRGB(200, 200, 200) -- "200"
 local OUTDOOR_CLR    = Color3.fromRGB(220, 220, 220)
 
 -- Brightness dia 0.55 / noite 1
-local BRIGHTNESS_DAY  = 0.55
-local BRIGHTNESS_NIGHT = 1.0
-local EXPOSURE_DAY    = 0.55
-local EXPOSURE_NIGHT  = 1.0
+local BRIGHTNESS_DAY  = 0.01
+local BRIGHTNESS_NIGHT = 0.01
+local EXPOSURE_DAY    = 0.01
+local EXPOSURE_NIGHT  = 1
 
---== Funções ==--
-
--- Desativa TODOS os tipos de luz (nenhum ponto de iluminação fica)
+--== Desativa TODOS os tipos de luz ==--
 local function disableAllLights(parent)
-    for _, child in parent:GetDescendants() do
-        if
-            child:IsA("Light") or
-            child:IsA("PointLight") or
-            child:IsA("SurfaceLight") or
-            child:IsA("SpotLight") or
-            child:IsA("ArcLight") or
-            child:IsA("LensFlare")
+    for _, child in parent:GetChildren() do
+        -- Todos os tipos de Light
+        if child:IsA("Light") or
+           child:IsA("PointLight") or
+           child:IsA("SurfaceLight") or
+           child:IsA("SpotLight") or
+           child:IsA("ArcLight")
         then
             child.Enabled = false
+        end
+
+        if child:IsA("Model") or child:IsA("BasePart") then
+            disableAllLights(child) -- recursivo
         end
     end
 end
@@ -40,16 +40,15 @@ local function trackAllLights()
             descendant:IsA("PointLight") or
             descendant:IsA("SurfaceLight") or
             descendant:IsA("SpotLight") or
-            descendant:IsA("ArcLight") or
-            descendant:IsA("LensFlare")
+            descendant:IsA("ArcLight")
         then
             descendant.Enabled = false
         end
     end)
 end
 
--- FullBright sem usar nenhuma luz física
-local function applyFullBrightNoLight()
+--== FullBright sem luz física ==--
+local function applyFullBrightNoLights()
     Lighting.Brightness               = BRIGHTNESS_DAY
     Lighting.ExposureCompensation     = EXPOSURE_DAY
     Lighting.GlobalShadows            = false      -- sem sombras
@@ -66,28 +65,28 @@ local function applyFullBrightNoLight()
     end
 end
 
--- Antilag quase invisível (leve, só visual)
+--== Antilag quase invisível + Decal reveal ==--
 local function applyAntilag()
     for _, part in Workspace:GetDescendants() do
         if
             part:IsA("BasePart") and
             not part:IsA("Seat") and
-            part:FindFirstAncestorWhichIsA("Model") == nil
+            not part:IsA("WedgePart") and
+            part.Name:lower():find("decal") == nil and
+            part:FindFirstAncestorWhichIsA("Model") == nil -- não mexe em Model/character
         then
-            part.LocalTransparencyModifier = 0.2 -- quase invisível, sem quebrar texturas
+            part.LocalTransparencyModifier = 0.2 -- leve, quase invisível
         end
     end
-end
 
--- Revealer de Decals transparentes (Antilag‑style)
-local function revealTransparentDecals()
+    -- Revealer de Decals transparentes
     for _, decal in Workspace:GetDescendants() do
         if
             decal:IsA("Decal") and
             decal.Transparency == 1 and
             decal.Texture ~= ""
         then
-            decal.LocalTransparencyModifier = 0
+            decal.LocalTransparencyModifier = 0 -- mostra
         end
     end
 end
@@ -108,7 +107,7 @@ local function trackTransparentDecals()
     end)
 end
 
--- Mantém tudo brilhante, sem luz e sem partes escuras (dia / noite)
+--== Mantém FullBright + zero luz física dia/noite ==--
 RunService:BindToRenderStep("FullBrightUpdater", Enum.RenderPriority.Camera.Value, function()
     local hour = Lighting.ClockTime
     local isDay = hour >= 7 and hour <= 19
@@ -126,10 +125,9 @@ RunService:BindToRenderStep("FullBrightUpdater", Enum.RenderPriority.Camera.Valu
     Lighting.FogStart               = 0
 end)
 
---== Inicia tudo no carregamento ==--
-applyFullBrightNoLight()
+--== Execução ==--
+applyFullBrightNoLights()
 disableAllLights(Workspace)
 trackAllLights()
 applyAntilag()
-revealTransparentDecals()
 trackTransparentDecals()
