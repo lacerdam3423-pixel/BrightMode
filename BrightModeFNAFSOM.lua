@@ -10,8 +10,8 @@ local OUTDOOR_CLR    = Color3.fromRGB(220, 220, 220)
 
 local BRIGHTNESS_DAY  = 1
 local BRIGHTNESS_NIGHT = 1
-local EXPOSURE_DAY    = 1
-local EXPOSURE_NIGHT  = 1
+local EXPOSURE_DAY    = 0.3
+local EXPOSURE_NIGHT  = 0.5
 
 --== Procurador de Luz / Sombras (para Dex / Explorer) ==--
 
