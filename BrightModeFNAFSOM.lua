@@ -8,8 +8,8 @@ local Workspace  = game:GetService("Workspace")
 local AMBIENT_CLR    = Color3.fromRGB(200, 200, 200) -- 200
 local OUTDOOR_CLR    = Color3.fromRGB(220, 220, 220)
 
-local BRIGHTNESS_DAY  = 0
-local BRIGHTNESS_NIGHT = 0
+local BRIGHTNESS_DAY  = 0.2,5
+local BRIGHTNESS_NIGHT = 0.5
 local EXPOSURE_DAY    = 0.2,5
 local EXPOSURE_NIGHT  = 0.5
 
