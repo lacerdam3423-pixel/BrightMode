@@ -16,7 +16,7 @@ local localPlayer = Players.LocalPlayer
 local AMBIENT_CLR = Color3.fromRGB(255, 255, 255)
 local OUTDOOR_CLR = Color3.fromRGB(255, 255, 255)
 local BRIGHTNESS_VALUE = 0
-local EXPOSURE_VALUE = 0.5
+local EXPOSURE_VALUE = 0.3
 
 -- == SISTEMA DE SINO (HORA REAL) == --
 local lastHour = -1
@@ -36,7 +36,7 @@ local function processObject(obj)
         -- 1. Regra de Transparência: 1 vira 0.75 (Visibilidade total)
         if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then
             if obj.Transparency >= 1 then
-                obj.Transparency = 0.45
+                obj.Transparency = 0.7
             end
         end
         
