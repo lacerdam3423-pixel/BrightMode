@@ -39,7 +39,7 @@ local function transformObject(v)
         
         -- Tudo que era Transparency 1 vira 0.75
         if v.Transparency == 1 then
-            v.Transparency = 0.45
+            v.Transparency = 0.75
         end
 
     -- Lógica de Decals (Transparent 1 vira 0 e mantém os outros visíveis)
