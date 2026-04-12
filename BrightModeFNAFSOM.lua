@@ -13,10 +13,10 @@ local localPlayer = Players.LocalPlayer
 local pGui = localPlayer:WaitForChild("PlayerGui")
 
 -- == CONFIGURAÇÕES TÉCNICAS (CONSERTADO) == --
-local BRIGHTNESS_DAY = 2.5
-local BRIGHTNESS_NIGHT = 0.5
-local EXPOSURE_DAY = 0.5
-local EXPOSURE_NIGHT = 0.5
+local BRIGHTNESS_DAY = 0.2
+local BRIGHTNESS_NIGHT = 0.3
+local EXPOSURE_DAY = 0.2
+local EXPOSURE_NIGHT = 0.3
 
 -- == 1. CRIAÇÃO DO RELÓGIO DO CELULAR (GUI) == --
 local ScreenGui = Instance.new("ScreenGui")
@@ -34,15 +34,15 @@ TimeLabel.BackgroundTransparency = 1
 TimeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TimeLabel.TextStrokeTransparency = 0
 TimeLabel.Font = Enum.Font.RobotoMono
-TimeLabel.TextSize = 24
+TimeLabel.TextSize = 15
 TimeLabel.Text = "00:00:00"
 
 -- == 2. ANTILAG INVISÍVEL E REGRAS DE TRANSPARÊNCIA == --
 local function optimizeObject(obj)
     -- Transparência 1 vira 0.75 (Revelação sem lag)
     if obj:IsA("BasePart") or obj:IsA("Decal") then
-        if obj.Transparency >= 0.95 then
-            obj.Transparency = 0.75
+        if obj.Transparency >= 1 then
+            obj.Transparency = 0.7
         end
     end
     -- Material Neon vira Ice (Estabilidade de FPS)
