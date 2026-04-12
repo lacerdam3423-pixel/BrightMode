@@ -43,7 +43,7 @@ local function AjustarObjeto(obj)
         end
         
         -- Invisíveis 0.8
-        if obj.Transparency >= 0.98 then
+        if obj.Transparency >= 1 then
             obj.Transparency = 0.8
         end
     end
