@@ -1,10 +1,6 @@
 --[[
-    FINAL BUG-FIXED & OPTIMIZED HUB
-    - 300 FPS Forçado (Uncapped)
-    - Qualidade de Textura Nível 4 (Mobile/PC)
-    - Transparência 1 -> 0.75 (Sem desaparecer itens)
-    - Material Neon -> Ice
-    - FullBright + Sino Real + Internet Boost
+    MIGMAX ULTIMATE OPTIMIZER 2026
+    Integrado: 300 FPS, Antilag, Relógio Real e Materiais Otimizados
 ]]
 
 local Lighting = game:GetService("Lighting")
@@ -14,86 +10,93 @@ local Players = game:GetService("Players")
 local NetworkClient = game:GetService("NetworkClient")
 
 local localPlayer = Players.LocalPlayer
+local pGui = localPlayer:WaitForChild("PlayerGui")
 
--- == CORREÇÃO DE VALORES (BRIGHTNESS/EXPOSURE) == --
-local AMBIENT_CLR = Color3.fromRGB(200, 200, 200)
-local OUTDOOR_CLR = Color3.fromRGB(220, 220, 220)
-local BRIGHTNESS_DAY = 2.5 -- Corrigido: ponto em vez de vírgula
+-- == CONFIGURAÇÕES TÉCNICAS (CONSERTADO) == --
+local BRIGHTNESS_DAY = 2.5
 local BRIGHTNESS_NIGHT = 0.5
 local EXPOSURE_DAY = 0.5
 local EXPOSURE_NIGHT = 0.5
 
--- == SISTEMA DE SINO (HORA REAL) == --
-local lastHour = -1
-local SinoSound = Instance.new("Sound")
-SinoSound.Name = "SinoHourNotify"
-SinoSound.Parent = localPlayer:WaitForChild("PlayerGui")
-SinoSound.SoundId = "rbxassetid://378977408"
-SinoSound.Volume = 1.0
+-- == 1. CRIAÇÃO DO RELÓGIO DO CELULAR (GUI) == --
+local ScreenGui = Instance.new("ScreenGui")
+local TimeLabel = Instance.new("TextLabel")
 
--- == FUNÇÃO DE PROCESSAMENTO DE OBJETOS (ANTILAG INVISÍVEL) == --
-local function fixObject(obj)
-    -- Revelar Transparência (1 para 0.75) sem quebrar o mapa
-    if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then
-        if obj.Transparency == 1 then
+ScreenGui.Name = "MigMaxClock"
+ScreenGui.Parent = pGui
+ScreenGui.IgnoreGuiInset = true
+
+TimeLabel.Name = "RelogioReal"
+TimeLabel.Parent = ScreenGui
+TimeLabel.Size = UDim2.new(0, 200, 0, 50)
+TimeLabel.Position = UDim2.new(0.5, -100, 0, 10) -- Topo central
+TimeLabel.BackgroundTransparency = 1
+TimeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TimeLabel.TextStrokeTransparency = 0
+TimeLabel.Font = Enum.Font.RobotoMono
+TimeLabel.TextSize = 24
+TimeLabel.Text = "00:00:00"
+
+-- == 2. ANTILAG INVISÍVEL E REGRAS DE TRANSPARÊNCIA == --
+local function optimizeObject(obj)
+    -- Transparência 1 vira 0.75 (Revelação sem lag)
+    if obj:IsA("BasePart") or obj:IsA("Decal") then
+        if obj.Transparency >= 0.95 then
             obj.Transparency = 0.75
         end
     end
-    
-    -- Troca de Material solicitada
+    -- Material Neon vira Ice (Estabilidade de FPS)
     if obj:IsA("BasePart") and obj.Material == Enum.Material.Neon then
         obj.Material = Enum.Material.Ice
     end
-    
-    -- Desativar luzes físicas para Antilag
+    -- Desativar sombras internas para Antilag
+    if obj:IsA("BasePart") then
+        obj.CastShadow = false
+    end
+    -- Desativar luzes físicas (FullBright Puro)
     if obj:IsA("Light") then
         obj.Enabled = false
     end
 end
 
--- == OTIMIZAÇÃO DE PERFORMANCE (300 FPS & NETWORK) == --
-local function initializeSystem()
-    if not game:IsLoaded() then game.Loaded:Wait() end
-    
-    -- Forçar 300 FPS e Nível 4 de Textura
-    setfpscap(300)
+-- == 3. CORE ENGINE (FPS & INTERNET) == --
+local function coreEngine()
+    setfpscap(300) -- Desbloqueia 300 FPS Forçado
     settings().Rendering.QualityLevel = Enum.QualityLevel.Level04
-    
-    -- Internet Boost (Mobile Optimization)
     settings().Network.IncomingReplicationLag = -1000
-    if NetworkClient:FindFirstChild("ClientReplicator") then
-        NetworkClient.ClientReplicator.PriorityMethod = Enum.PriorityMethod.AccumulatedPriority
-    end
-
-    -- Aplicar a todos os objetos já existentes
-    for _, descendant in ipairs(Workspace:GetDescendants()) do
-        fixObject(descendant)
+    
+    for _, item in ipairs(Workspace:GetDescendants()) do
+        optimizeObject(item)
     end
 end
 
--- == HEARTBEAT (LOOP CONSTANTE SEM LAG) == --
+-- == 4. HEARTBEAT LOOP (ATUALIZAÇÃO CONSTANTE) == --
 RunService.Heartbeat:Connect(function()
-    -- Manter FullBright Estável
+    -- Atualiza Relógio com horário do celular
+    local timeData = DateTime.now():ToLocalTime()
+    TimeLabel.Text = timeData:FormatLocalTime("LTS", "pt-br")
+    
+    -- Mantém FullBright e FPS
     local isDay = Lighting.ClockTime >= 7 and Lighting.ClockTime <= 19
     Lighting.Brightness = isDay and BRIGHTNESS_DAY or BRIGHTNESS_NIGHT
     Lighting.ExposureCompensation = isDay and EXPOSURE_DAY or EXPOSURE_NIGHT
     Lighting.GlobalShadows = false
     
-    -- Trava de Qualidade
+    -- Antilag constante sem quebrar nada
     settings().Rendering.EditQualityLevel = Enum.QualityLevel.Level04
-    
-    -- Sino de Hora Real
-    local dt = DateTime.now():ToLocalTime()
-    if dt.Hour ~= lastHour then
-        lastHour = dt.Hour
-        SinoSound:Play()
-    end
 end)
 
--- Monitorar novos itens que entram no mapa
-Workspace.DescendantAdded:Connect(fixObject)
+-- == 5. EVENTOS E INICIALIZAÇÃO == --
+Workspace.DescendantAdded:Connect(function(d)
+    task.wait(0.1)
+    optimizeObject(d)
+end)
 
--- Iniciar
-initializeSystem()
+coreEngine()
 
-print("Tudo consertado: 300 FPS Forçado, Texturas Nível 4 e Antilag Ativo.")
+-- Streaming Permanente
+Workspace.StreamingEnabled = true
+Workspace.StreamingMinRadius = 64
+Workspace.StreamingTargetRadius = 1024
+
+print("Tudo pronto! Relógio ativo, 300 FPS e Antilag operando.")
