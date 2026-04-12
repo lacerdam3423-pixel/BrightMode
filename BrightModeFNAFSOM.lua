@@ -1,81 +1,83 @@
--- BRIGHT MODE SUPREMO (FPS BOOST & ZERO DARKNESS)
+-- BRIGHT MODE ULTRA OTIMIZADO (ANTI-LAG)
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 
--- 1. EXTIRPAR ESCURIDÃO E SOMBRAS (ZERO ÁREA PRETA)
-local function ArrumarIluminacao()
+-- 1. CONFIGURAÇÃO DE ILUMINAÇÃO (SEM ÁREAS PRETAS)
+local function AjustarGlobal()
     Lighting.Brightness = 0
     Lighting.GlobalShadows = false
     Lighting.Ambient = Color3.new(1, 1, 1)
     Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
-    Lighting.ShadowSoftness = 0
-    Lighting.EnvironmentDiffuseScale = 0
-    Lighting.EnvironmentSpecularScale = 0
-    
-    -- Limpeza de Fog e Atmosfera
     Lighting.FogEnd = 999999
-    Lighting.FogStart = 0
+    
+    -- Remove atmosfera para manter a clareza da imagem
     local atmos = Lighting:FindFirstChildOfClass("Atmosphere")
     if atmos then atmos:Destroy() end
 end
 
--- 2. OTIMIZAÇÃO DE FPS E REFLEXOS (MESA, MESHPART, ETC)
-local function OtimizarObjeto(obj)
-    -- Bloqueia Luzes (PointLight, etc)
+-- 2. AJUSTE DE OBJETOS COM CONTROLE DE LAG
+local function AplicarEfeitos(obj)
+    -- Bloqueia luzes dinâmicas que criam sombras
     if obj:IsA("Light") then
         obj.Enabled = false
     end
     
-    -- Ajuste Geral de Partes (MeshPart, Part, Union)
     if obj:IsA("BasePart") then
-        obj.CastShadow = false -- REMOVE SOMBRA INDIVIDUAL
-        obj.Reflectance = 0    -- REMOVE REFLEXO (FPS BOOST)
+        obj.CastShadow = false -- Remove sombras sem mudar a textura
+        obj.Reflectance = 0    -- Melhora FPS
         
-        -- Materiais
+        -- Neon vira Ice (conforme pedido)
         if obj.Material == Enum.Material.Neon then
             obj.Material = Enum.Material.Ice
         end
         
-        -- Transparência (Invisível 1 -> 0.7)
-        if obj.Transparency >= 0.99 then
-            obj.Transparency = 0.8
+        -- Invisível vira 0.7
+        if obj.Transparency >= 0.98 then
+            obj.Transparency = 0.7
         end
     end
 end
 
--- 3. TRANSIÇÃO DE CLIMA (DIA 0.5 / NOITE 0.8)
-local function Suavizar(alvo)
-    TweenService:Create(Lighting, TweenInfo.new(2), {ExposureCompensation = alvo}):Play()
-end
-
-local function Ciclo()
-    if Lighting.ClockTime >= 6 and Lighting.ClockTime <= 18 then
-        Suavizar(0.5)
-    else
-        Suavizar(0.8)
+-- Varredura segura (Processa 100 itens e descansa um pouco para não travar)
+local function VarreduraSegura()
+    local count = 0
+    for _, v in pairs(workspace:GetDescendants()) do
+        AplicarEfeitos(v)
+        count = count + 1
+        if count >= 100 then
+            count = 0
+            task.wait() -- Pausa curta para o processador respirar
+        end
     end
 end
 
--- 4. EXECUÇÃO INSTANTÂNEA E MONITORAMENTO
-ArrumarIluminacao()
-
--- Varredura Inicial
-for _, v in pairs(workspace:GetDescendants()) do
-    OtimizarObjeto(v)
+-- 3. TRANSIÇÃO DE BRILHO (2 SEGUNDOS)
+local function SuavizarExposicao(alvo)
+    TweenService:Create(Lighting, TweenInfo.new(2), {ExposureCompensation = alvo}):Play()
 end
 
--- Monitora novos itens (Otimiza instantaneamente ao carregar)
-workspace.DescendantAdded:Connect(OtimizarObjeto)
+local function ChecarHorario()
+    if Lighting.ClockTime >= 6 and Lighting.ClockTime <= 18 then
+        SuavizarExposicao(0.5) -- Dia
+    else
+        SuavizarExposicao(0.8) -- Noite
+    end
+end
 
--- 5. LOOP DE MANUTENÇÃO (FPS OTIMIZADO)
+-- 4. EXECUÇÃO
+AjustarGlobal()
+task.spawn(VarreduraSegura) -- Executa a varredura em segundo plano
+
+-- Monitora novos objetos sem causar lag
+workspace.DescendantAdded:Connect(AplicarEfeitos)
+
+-- Loop de manutenção leve (1 vez por segundo)
 task.spawn(function()
     while true do
-        ArrumarIluminacao()
-        Ciclo()
-        -- Forçar FPS: Desativa sombras globais caso o jogo tente ligar
-        sethiddenproperty(Lighting, "Technology", Enum.Technology.Compatibility)
+        AjustarGlobal()
+        ChecarHorario()
         task.wait(1)
     end
 end)
 
-print("Full Bright Ativo: Zero Sombras | Reflection 0 | FPS Max")
+print("Bright Mode: Ativado sem Lag no Dead Rails!")
