@@ -1,11 +1,11 @@
-wait("0.001")
+wait("0.01")
 -- BRIGHT MODE ULTRA-LEVE (ESPECIAL MOTO E20 / E40)
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 
 -- 1. CONFIGURAÇÃO GLOBAL (ZERO IMPACTO NO FPS)
 local function AjustarClima()
-    Lighting.Brightness = 0
+    Lighting.Brightness = 0.0
     Lighting.GlobalShadows = false
     Lighting.Ambient = Color3.new(255, 255, 255
     Lighting.OutdoorAmbient = Color3.new(255, 255, 255)
@@ -24,7 +24,7 @@ end
 
 local function AtualizarCiclo()
     if Lighting.ClockTime >= 6 and Lighting.ClockTime <= 18 then
-        MudarExposicao(0.0) -- Dia
+        MudarExposicao(0.01) -- Dia
     else
         MudarExposicao(0.3) -- Noite
     end
@@ -44,7 +44,7 @@ local function AjustarObjeto(obj)
         end
         
         -- Invisíveis 0.8
-        if obj.Transparency >= 0.99 then
+        if obj.Transparency >= 0.98 then
             obj.Transparency = 0.8
         end
     end
