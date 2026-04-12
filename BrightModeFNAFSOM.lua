@@ -31,7 +31,7 @@ local function transformObject(v)
         if v.Material == Enum.Material.Neon then
             v.Material = Enum.Material.Ice
         else
-            v.Material = Enum.Material.Plastic
+            v.Material = Enum.Material.SmothPlastic
         end
         
         v.Reflectance = 0
