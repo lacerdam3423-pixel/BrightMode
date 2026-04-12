@@ -1,173 +1,114 @@
 --[[
-    ENGINE INTEGRADA: MigMax Ultimate Performance & Visuals
-    Recursos: 300 FPS, Texturas Nível 4, FullBright, Anti-Lag e Sino Real-Time.
+    ENGINE INTEGRADA: PERFORMANCE + FULLBRIGHT + SINCRONIZAÇÃO
+    Usuário: MigMax
+    Configurações: 300 FPS, Texturas Nv4, Transparência 0.75, Sem Lag
 ]]
 
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local PlayerService = game:GetService("Players")
+local Players = game:GetService("Players")
 local NetworkClient = game:GetService("NetworkClient")
 
-local localPlayer = PlayerService.LocalPlayer
+local localPlayer = Players.LocalPlayer
+if not game:IsLoaded() then game.Loaded:Wait() end
 
--- ==========================================
--- 1. CONFIGURAÇÕES DE ILUMINAÇÃO & FULLBRIGHT
--- ==========================================
+-- == CONFIGURAÇÕES DE ILUMINAÇÃO (FULLBRIGHT) == --
 local AMBIENT_CLR = Color3.fromRGB(200, 200, 200)
 local OUTDOOR_CLR = Color3.fromRGB(220, 220, 220)
+local BRIGHTNESS_DAY, BRIGHTNESS_NIGHT = 0.5, 0.5
+local EXPOSURE_DAY, EXPOSURE_NIGHT = 0.5, 0.5
 
-local BRIGHTNESS_DAY = 0.25 -- Corrigido de 0.2,5 para 0.25
-local BRIGHTNESS_NIGHT = 0.5
-local EXPOSURE_DAY = 0.25
-local EXPOSURE_NIGHT = 0.5
+-- == SISTEMA DE SOM (SINO) == --
+local lastHour = -1
+local SinoSound = Instance.new("Sound")
+SinoSound.Name = "SinoHourNotify"
+SinoSound.Parent = localPlayer:WaitForChild("PlayerGui")
+SinoSound.SoundId = "rbxassetid://378977408"
+SinoSound.Volume = 1.0
 
--- ==========================================
--- 2. SISTEMA DE PERFORMANCE (300 FPS / TEXTURA L4)
--- ==========================================
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
+-- == FUNÇÕES DE OTIMIZAÇÃO E VISIBILIDADE == --
 
-local function applyPerformanceSettings()
-    setfpscap(300) -- Desbloqueio forçado de 300 FPS
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level04 -- Textura nível 4
-    settings().Rendering.EditQualityLevel = Enum.QualityLevel.Level04
+local function OptimizeAndReveal()
+    -- Desbloqueio de FPS e Qualidade de Textura (Simulação Nível 4)
+    setfpscap(300)
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level04
     
-    -- Internet Boost Mobile
-    settings().Network.IncomingReplicationLag = -1000
-    if NetworkClient:FindFirstChild("ClientReplicator") then
-        NetworkClient.ClientReplicator.PriorityMethod = Enum.PriorityMethod.AccumulatedPriority
-    end
-end
-
--- ==========================================
--- 3. DETECTOR E DESATIVADOR DE LUZES
--- ==========================================
-local function logLightFound(light)
-    pcall(function()
-        warn(("Luz detectada (Dex/Explorer): %s (%s)"):format(light.Name, light.ClassName))
-    end)
-end
-
-local function watchAllLights(parent)
-    for _, child in ipairs(parent:GetDescendants()) do
-        if child:IsA("Light") then
-            logLightFound(child)
-            child.Enabled = false
-        end
-    end
-end
-
--- ==========================================
--- 4. REVELAÇÃO DE MAPA & ANTI-LAG INVISÍVEL
--- ==========================================
-local function applyVisualOptimization()
     for _, obj in ipairs(Workspace:GetDescendants()) do
-        -- Revelar Transparência 1 -> 0 (Decais e Partes)
-        if (obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture")) then
+        -- Revelar itens invisíveis para 0.75 (Parts e Decals)
+        if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then
             if obj.Transparency == 1 then
                 obj.Transparency = 0.75
             end
         end
         
-        -- Anti-Lag Silencioso (sem destruir nada)
-        if obj:IsA("BasePart") and not obj:IsA("Seat") and not obj:IsA("WedgePart") then
-            if obj.Name:lower():find("decal") == nil and obj:FindFirstAncestorWhichIsA("Model") == nil then
-                obj.LocalTransparencyModifier = 0.2
-            end
+        -- Desativar Luzes Físicas (Detector)
+        if obj:IsA("Light") then
+            obj.Enabled = false
         end
     end
 end
 
--- ==========================================
--- 5. SISTEMA DE SINO (HORA REAL)
--- ==========================================
-local lastHour = -1
-local function createSinoSound()
-    local playerGui = localPlayer:WaitForChild("PlayerGui")
-    local sound = Instance.new("Sound")
-    sound.Name = "SinoHourNotify"
-    sound.Parent = playerGui
-    sound.SoundId = "rbxassetid://378977408"
-    sound.Volume = 1.0
-    return sound
-end
-
-local SinoSound = createSinoSound()
-
-local function checkRealTime()
+local function CheckRealTime()
     local dt = DateTime.now():ToLocalTime()
     local hour = dt.Hour
     if hour ~= lastHour then
         lastHour = hour
-        pcall(function()
-            SinoSound:Stop()
-            SinoSound:Play()
-        end)
+        SinoSound:Play()
     end
 end
 
--- ==========================================
--- 6. HEARTBEAT CONSTANTE (ATUALIZAÇÃO 3D & LIGHT)
--- ==========================================
-RunService.Heartbeat:Connect(function()
-    -- Manter FullBright sem sombras
+local function ApplyLightingSettings()
     local isDay = Lighting.ClockTime >= 7 and Lighting.ClockTime <= 19
-    local bright = isDay and BRIGHTNESS_DAY or BRIGHTNESS_NIGHT
-    local expo = isDay and EXPOSURE_DAY or EXPOSURE_NIGHT
-
-    Lighting.Brightness = bright
-    Lighting.ExposureCompensation = expo
+    Lighting.Brightness = isDay and BRIGHTNESS_DAY or BRIGHTNESS_NIGHT
+    Lighting.ExposureCompensation = isDay and EXPOSURE_DAY or EXPOSURE_NIGHT
     Lighting.GlobalShadows = false
+    Lighting.ShadowSoftness = 0
     Lighting.Ambient = AMBIENT_CLR
     Lighting.OutdoorAmbient = OUTDOOR_CLR
     Lighting.FogEnd = 999999
     
-    -- Forçar Textura Nível 4 em tempo real
+    if Lighting:FindFirstChild("Atmosphere") then
+        Lighting.Atmosphere:Destroy()
+    end
+end
+
+-- == LOOP CONSTANTE (HEARTBEAT) == --
+-- Tudo integrado aqui para rodar a cada quadro do jogo
+RunService.Heartbeat:Connect(function()
+    ApplyLightingSettings()
+    CheckRealTime()
+    
+    -- Mantém a força do 3D e texturas sempre ativa
     settings().Rendering.EditQualityLevel = Enum.QualityLevel.Level04
     
-    checkRealTime()
+    -- Internet Boost / Network Optimization
+    settings().Network.IncomingReplicationLag = -1000
 end)
 
--- ==========================================
--- 7. EVENTOS DE MONITORAMENTO (STREAMING/ADDIÇÃO)
--- ==========================================
-Workspace.DescendantAdded:Connect(function(descendant)
-    -- Desativar luzes novas
-    if descendant:IsA("Light") then
-        logLightFound(descendant)
-        descendant.Enabled = false
+-- == MONITORAMENTO DE NOVOS OBJETOS (ANTILAG E REVELAÇÃO) == --
+Workspace.DescendantAdded:Connect(function(obj)
+    task.wait(0.1)
+    if (obj:IsA("BasePart") or obj:IsA("Decal")) and obj.Transparency == 1 then
+        obj.Transparency = 0.75
     end
-    
-    -- Revelar itens novos que entram no Streaming
-    if (descendant:IsA("BasePart") or descendant:IsA("Decal")) and descendant.Transparency == 1 then
-        task.wait(0.1)
-        descendant.Transparency = 0
+    if obj:IsA("Light") then
+        obj.Enabled = false
     end
 end)
 
--- Auto-Recolocar ao carregar personagem
-local function Initialize()
-    applyPerformanceSettings()
-    watchAllLights(Workspace)
-    applyVisualOptimization()
-    
-    -- Streaming Mode Permanente (Simulação)
-    Workspace.StreamingEnabled = true
-    Workspace.StreamingMinRadius = 64
-    Workspace.StreamingTargetRadius = 1024
+-- == INICIALIZAÇÃO == --
+local function Start()
+    OptimizeAndReveal()
+    ApplyLightingSettings()
 end
 
+Start()
+
+-- Auto-recolocar ao spawnar
 localPlayer.CharacterAdded:Connect(function()
     task.wait(1)
-    Initialize()
+    Start()
 end)
 
--- Execução inicial
-Initialize()
-if Lighting:FindFirstChild("Atmosphere") then
-    Lighting.Atmosphere:Destroy()
-end
-
-print("MigMax Engine: Scripts Integrados com Sucesso. (300 FPS / Sino Ativo)")
+print("Script Integrado MigMax: Performance 300 FPS + FullBright + Transparência 0.75 Ativos.")
