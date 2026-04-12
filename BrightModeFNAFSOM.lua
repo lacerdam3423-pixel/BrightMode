@@ -1,68 +1,81 @@
-local RunService = game:GetService("RunService")
+-- BRIGHT MODE SUPREMO (FPS BOOST & ZERO DARKNESS)
 local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
 
-local function applyGlobalSettings()
-    Lighting.Brightness = 0.1
+-- 1. EXTIRPAR ESCURIDÃO E SOMBRAS (ZERO ÁREA PRETA)
+local function ArrumarIluminacao()
+    Lighting.Brightness = 0
     Lighting.GlobalShadows = false
-    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-    Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-    Lighting.ExposureCompensation = 0
-    Lighting.FogEnd = 100000
-    Lighting.FogStart = 0
+    Lighting.Ambient = Color3.new(1, 1, 1)
+    Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+    Lighting.ShadowSoftness = 0
+    Lighting.EnvironmentDiffuseScale = 0
+    Lighting.EnvironmentSpecularScale = 0
     
-    for _, effect in pairs(Lighting:GetChildren()) do
-        if effect:IsA("PostEffect") or effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") then
-            effect.Enabled = false
-        end
-    end
+    -- Limpeza de Fog e Atmosfera
+    Lighting.FogEnd = 999999
+    Lighting.FogStart = 0
+    local atmos = Lighting:FindFirstChildOfClass("Atmosphere")
+    if atmos then atmos:Destroy() end
 end
 
-local function dexScanner(obj)
+-- 2. OTIMIZAÇÃO DE FPS E REFLEXOS (MESA, MESHPART, ETC)
+local function OtimizarObjeto(obj)
+    -- Bloqueia Luzes (PointLight, etc)
+    if obj:IsA("Light") then
+        obj.Enabled = false
+    end
+    
+    -- Ajuste Geral de Partes (MeshPart, Part, Union)
     if obj:IsA("BasePart") then
-        obj.CastShadow = false
-        obj.Reflectance = 0
+        obj.CastShadow = false -- REMOVE SOMBRA INDIVIDUAL
+        obj.Reflectance = 0    -- REMOVE REFLEXO (FPS BOOST)
         
+        -- Materiais
         if obj.Material == Enum.Material.Neon then
             obj.Material = Enum.Material.Ice
-        else
-            obj.Material = Enum.Material.Plastic
         end
-    end
-
-    if obj:IsA("Texture") or obj:IsA("Decal") then
-        if obj.Transparency == 1 then
-            obj.Transparency = 0.7
-        end
-    end
-
-    if obj:IsA("MeshPart") or obj:IsA("SpecialMesh") then
-        if obj:IsA("MeshPart") then
-            obj.Material = Enum.Material.Plastic
-            obj.Reflectance = 0
+        
+        -- Transparência (Invisível 1 -> 0.7)
+        if obj.Transparency >= 0.99 then
+            obj.Transparency = 0.8
         end
     end
 end
 
-local function updateEnvironment()
-    local hour = Lighting.ClockTime
-    if hour >= 6 and hour <= 18 then
-        Lighting.ExposureCompensation = 0.2
-        Lighting.Brightness = 0.01
+-- 3. TRANSIÇÃO DE CLIMA (DIA 0.5 / NOITE 0.8)
+local function Suavizar(alvo)
+    TweenService:Create(Lighting, TweenInfo.new(2), {ExposureCompensation = alvo}):Play()
+end
+
+local function Ciclo()
+    if Lighting.ClockTime >= 6 and Lighting.ClockTime <= 18 then
+        Suavizar(0.5)
     else
-        Lighting.ExposureCompensation = 0.4
-        Lighting.Brightness = 0.01
+        Suavizar(0.8)
     end
 end
 
-RunService.Heartbeat:Connect(function()
-    applyGlobalSettings()
-    updateEnvironment()
-    
-    for _, item in pairs(game.Workspace:GetDescendants()) do
-        dexScanner(item)
+-- 4. EXECUÇÃO INSTANTÂNEA E MONITORAMENTO
+ArrumarIluminacao()
+
+-- Varredura Inicial
+for _, v in pairs(workspace:GetDescendants()) do
+    OtimizarObjeto(v)
+end
+
+-- Monitora novos itens (Otimiza instantaneamente ao carregar)
+workspace.DescendantAdded:Connect(OtimizarObjeto)
+
+-- 5. LOOP DE MANUTENÇÃO (FPS OTIMIZADO)
+task.spawn(function()
+    while true do
+        ArrumarIluminacao()
+        Ciclo()
+        -- Forçar FPS: Desativa sombras globais caso o jogo tente ligar
+        sethiddenproperty(Lighting, "Technology", Enum.Technology.Compatibility)
+        task.wait(1)
     end
 end)
 
-game.Workspace.DescendantAdded:Connect(function(newItem)
-    dexScanner(newItem)
-end)
+print("Full Bright Ativo: Zero Sombras | Reflection 0 | FPS Max")
