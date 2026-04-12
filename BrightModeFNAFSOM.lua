@@ -8,7 +8,7 @@ local Players    = game:GetService("Players")
 --== 1. CONFIGURAÇÕES DE FRAMErate E PERFORMANCE ==--
 pcall(function()
     if setfpscap then
-        setfpscap(300)
+        setfpscap(100)
     end
     settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
 end)
@@ -39,7 +39,7 @@ local function transformObject(v)
         
         -- Tudo que era Transparency 1 vira 0.75
         if v.Transparency == 1 then
-            v.Transparency = 0.75
+            v.Transparency = 0.45
         end
 
     -- Lógica de Decals (Transparent 1 vira 0 e mantém os outros visíveis)
