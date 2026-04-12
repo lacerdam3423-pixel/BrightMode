@@ -9,9 +9,9 @@ local LocalPlayer = Players.LocalPlayer
 
 --== Configurações de FullBright ==--
 local AMBIENT_CLR    = Color3.fromRGB(200, 200, 200)
-local OUTDOOR_CLR    = Color3.fromRGB(220, 220, 220)
-local BRIGHTNESS_VAL = 2.5 -- Valor corrigido para evitar erro de sintaxe
-local EXPOSURE_VAL   = 0.5
+local OUTDOOR_CLR    = Color3.fromRGB(200, 200, 200)
+local BRIGHTNESS_VAL = 0 -- Valor corrigido para evitar erro de sintaxe
+local EXPOSURE_VAL   = 0.4
 
 --== Funções de Conversão (Materiais e Transparência) ==--
 
