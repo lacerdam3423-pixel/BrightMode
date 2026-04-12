@@ -1,102 +1,83 @@
---== FullBright + SEM LUZ + SINCRONIA REAL + CONVERSOR (LuaU) ==--
+--== SUPER OTIMIZADOR: FULLBRIGHT + MAP LOADER + 300 FPS + CONVERSOR ==--
 
 local Lighting   = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local Workspace  = game:GetService("Workspace")
 local Players    = game:GetService("Players")
+local Settings   = settings()
 
-local LocalPlayer = Players.LocalPlayer
+--== Configurações de Performance e FPS ==--
+setfpscap(300) -- Desbloqueia e trava em 300 FPS (Requer executor compatível)
 
---== Configurações de FullBright ==--
-local AMBIENT_CLR    = Color3.fromRGB(200, 200, 200)
-local OUTDOOR_CLR    = Color3.fromRGB(200, 200, 200)
-local BRIGHTNESS_VAL = 0 -- Valor corrigido para evitar erro de sintaxe
-local EXPOSURE_VAL   = 0.4
+-- Configurações de Renderização (Anti-Lag Invisível)
+Settings.Network.IncomingReplicationLag = -1000
+Settings.Rendering.QualityLevel = Enum.QualityLevel.Level01 -- Menor custo de render
 
---== Funções de Conversão (Materiais e Transparência) ==--
+--== Streaming Mode Permanente e Carregamento Rápido ==--
+Workspace.StreamingEnabled = true
+Workspace.StreamingMinRadius = 1000
+Workspace.StreamingTargetRadius = 3000
 
-local function transformPart(part)
-    if part:IsA("BasePart") then
-        -- Tudo que era Transparency 1 vira 0.75
-        if part.Transparency == 1 then
-            part.Transparency = 0.75
+--== Funções de Conversão e Detalhes ==--
+
+local function optimizeObject(obj)
+    -- Conversão de Transparência e Materiais
+    if obj:IsA("BasePart") then
+        if obj.Transparency == 1 then obj.Transparency = 0.75 end
+        if obj.Material == Enum.Material.Neon then obj.Material = Enum.Material.Ice end
+        
+        -- Anti-Lag: Remove sombras projetadas por partes individuais para ganho de FPS
+        obj.CastShadow = false
+    
+    -- Conversão de Decals (Transparent 1 -> 0)
+    elseif obj:IsA("Decal") or obj:IsA("Texture") then
+        if obj.Transparency == 1 then
+            obj.Transparency = 0
         end
-        -- Tudo que era Neon vira Ice
-        if part.Material == Enum.Material.Neon then
-            part.Material = Enum.Material.Ice
-        end
-    elseif part:IsA("Decal") or part:IsA("Texture") then
-        if part.Transparency == 1 then
-            part.Transparency = 0.75
-        end
+    
+    -- Desativar Luzes
+    elseif obj:IsA("Light") then
+        obj.Enabled = false
     end
 end
 
---== Gerenciador de Luzes ==--
-
-local function disableLight(light)
-    if light:IsA("Light") or light:IsA("PointLight") or light:IsA("SurfaceLight") or light:IsA("SpotLight") then
-        light.Enabled = false
-    end
-end
-
---== Sistema de Horário e Sino ==--
-
+--== Sistema de Horário e Sino (Celular) ==--
 local lastHour = -1
-local sinoSound = Instance.new("Sound")
-sinoSound.Name = "SinoHourNotify"
+local sinoSound = Instance.new("Sound", Players.LocalPlayer:WaitForChild("PlayerGui"))
 sinoSound.SoundId = "rbxassetid://378977408"
 sinoSound.Volume = 1.0
-sinoSound.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local function updateClock()
-    local date = os.date("*t") -- Pega horário do sistema/celular
-    local hour = date.hour
-    local min  = date.min
-    local sec  = date.sec
-
-    -- Sincroniza o relógio do jogo com o real
-    Lighting.TimeOfDay = string.format("%02d:%02d:%02d", hour, min, sec)
-
-    -- Toca o sino se a hora mudou
-    if hour ~= lastHour then
-        if lastHour ~= -1 then -- Evita tocar assim que o script abre
-            sinoSound:Play()
-        end
-        lastHour = hour
+local function syncClock()
+    local date = os.date("*t")
+    Lighting.TimeOfDay = string.format("%02d:%02d:%02d", date.hour, date.min, date.sec)
+    
+    if date.hour ~= lastHour then
+        if lastHour ~= -1 then sinoSound:Play() end
+        lastHour = date.hour
     end
 end
 
---== Inicialização de Varredura ==--
-
-for _, obj in ipairs(Workspace:GetDescendants()) do
-    transformPart(obj)
-    disableLight(obj)
+--== Execução de Varredura Rápida (Mapa) ==--
+for _, v in ipairs(Workspace:GetDescendants()) do
+    optimizeObject(v)
 end
 
-Workspace.DescendantAdded:Connect(function(obj)
-    transformPart(obj)
-    disableLight(obj)
-end)
+Workspace.DescendantAdded:Connect(optimizeObject)
 
---== Heartbeat Loop (Atualização Constante sem Lag) ==--
-
+--== Heartbeat Loop (300 FPS Stable & FullBright) ==--
 RunService.Heartbeat:Connect(function()
-    -- Mantém FullBright
-    Lighting.Brightness = BRIGHTNESS_VAL
-    Lighting.ExposureCompensation = EXPOSURE_VAL
+    -- FullBright e Visual Realista Limpo
+    Lighting.Brightness = 0
+    Lighting.ExposureCompensation = 0.4
     Lighting.GlobalShadows = false
-    Lighting.Ambient = AMBIENT_CLR
-    Lighting.OutdoorAmbient = OUTDOOR_CLR
-    Lighting.FogEnd = 999999
+    Lighting.Ambient = Color3.fromRGB(200, 200, 200)
+    Lighting.OutdoorAmbient = Color3.fromRGB(220, 220, 220)
     
-    -- Atualiza Horário do Celular no Jogo e verifica Sino
-    updateClock()
+    -- Sincronia de Horário
+    syncClock()
 end)
 
--- Remove Atmosfera para manter clareza total
-if Lighting:FindFirstChild("Atmosphere") then
-    Lighting.Atmosphere:Destroy()
-end
+-- Limpeza de Atmosfera (Realismo de Claridade)
+if Lighting:FindFirstChild("Atmosphere") then Lighting.Atmosphere:Destroy() end
 
-warn("Script Ativo: FullBright, Conversão de Materiais e Horário Real Sincronizado.")
+warn("Sistema rodando: 300 FPS Lock | Decals 0 | Mapa Rápido | Sem Lag")
