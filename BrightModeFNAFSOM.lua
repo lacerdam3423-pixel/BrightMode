@@ -1,90 +1,73 @@
--- SCRIPT SUPREMO UNIFICADO (MOTO E20/E40 - ZERO LAG)
+-- BRIGHT MODE DEFINITIVO (MOTO E20/E40 & DELTA)
 local Lighting = game:GetService("Lighting")
-local TweenService = game:GetService("TweenService")
-local camera = workspace.CurrentCamera
 
--- --- CONFIGURAÇÕES DE FOV ---
-local targetFOV = 67.5
-local transitionTime = 4
-local checkInterval = 0.6
-
-local fovTween = TweenService:Create(camera, TweenInfo.new(transitionTime, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {FieldOfView = targetFOV})
-fovTween:Play()
-
-task.spawn(function()
-    fovTween.Completed:Wait()
-    while true do
-        if camera.FieldOfView ~= targetFOV then camera.FieldOfView = targetFOV end
-        task.wait(checkInterval)
-    end
-end)
-
--- --- CONFIGURAÇÕES DE BRIGHT MODE ---
+-- 1. ILUMINAÇÃO TOTAL E REMOÇÃO DE ESCURIDÃO
 local function IluminarTudo()
     Lighting.Brightness = 0
     Lighting.GlobalShadows = false
     Lighting.Ambient = Color3.new(1, 1, 1)
     Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
     
-    -- Exposição Instantânea (Dia 0.5 / Noite 0.8)
+    -- Ajuste de Exposição Instantâneo (Sem transição suave)
     local hora = Lighting.ClockTime
     if hora >= 6 and hora <= 18 then
-        Lighting.ExposureCompensation = 0.5
+        Lighting.ExposureCompensation = 0.5 -- Dia
     else
-        Lighting.ExposureCompensation = 0.8
+        Lighting.ExposureCompensation = 0.8 -- Noite
     end
 
-    -- Limpeza de Fog e Atmosfera
+    -- Remove Fog e Atmosfera que causam sombras/lag
     Lighting.FogEnd = 999999
     Lighting.FogStart = 0
     local atmos = Lighting:FindFirstChildOfClass("Atmosphere")
     if atmos then atmos:Destroy() end
 end
 
--- --- SISTEMA DE MATERIAIS E BLOQUEIO (SEM MODIFICAR TEXTURAS) ---
+-- 2. AJUSTE DE MATERIAIS (PRESERVANDO TEXTURAS)
 local function AjustarObjeto(obj)
+    -- Bloqueia luzes (PointLight, SpotLight, etc)
     if obj:IsA("Light") then
         obj.Enabled = false
-    elseif obj:IsA("BasePart") then
+    end
+    
+    if obj:IsA("BasePart") then
+        -- Remove sombras projetadas sem mexer na textura original
         obj.CastShadow = false
         
-        -- TRANSFORMA NEON EM ICE (CORRIGIDO)
+        -- Materiais específicos
         if obj.Material == Enum.Material.Neon then
             obj.Material = Enum.Material.Ice
         end
         
-        -- INVISÍVEL FICA 0.8
+        -- Objetos invisíveis ficam 0.8 (Como pedido)
         if obj.Transparency >= 0.98 then
             obj.Transparency = 0.8
         end
     end
 end
 
--- --- EXECUÇÃO SEGURA PARA MOTOROLA (ANTI-TRAVAMENTO) ---
+-- 3. EXECUÇÃO INSTANTÂNEA E OTIMIZADA
 IluminarTudo()
 
+-- Varredura segura para não travar o celular
 task.spawn(function()
     local descendants = workspace:GetDescendants()
     for i = 1, #descendants do
         AjustarObjeto(descendants[i])
-        -- Pausa a cada 25 itens para o Moto E20/E40 não congelar
-        if i % 25 == 0 then 
-            task.wait(0.1) 
-        end
+        -- Pausa pequena a cada 40 itens para manter o FPS estável
+        if i % 40 == 0 then task.wait(0.1) end
     end
 end)
 
-workspace.DescendantAdded:Connect(function(obj)
-    task.wait(0.1) -- Espera carregar para não dar pico de lag
-    AjustarObjeto(obj)
-end)
+-- Monitora novos objetos que entrarem no mapa
+workspace.DescendantAdded:Connect(AjustarObjeto)
 
--- --- ATUALIZAÇÃO AUTOMÁTICA (CADA 0.5 SEGUNDOS) ---
+-- 4. MANUTENÇÃO AUTOMÁTICA (RECOLOCA CADA 1 SEGUNDO)
 task.spawn(function()
     while true do
         IluminarTudo()
-        task.wait(0.5) -- ATUALIZAÇÃO RÁPIDA DE 0.5s CONFORME PEDIDO
+        task.wait(1)
     end
 end)
 
-print("Script Recriado: Neon->Ice | 0.5s Refresh | FOV 67.5 | Anti-Lag")
+print("Bright Mode Recriado: Tudo Iluminado!")
