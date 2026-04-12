@@ -1,102 +1,102 @@
---[[
-    MIGMAX ULTIMATE OPTIMIZER 2026
-    Integrado: 300 FPS, Antilag, Relógio Real e Materiais Otimizados
-]]
+--== FullBright + SEM LUZ + SINCRONIA REAL + CONVERSOR (LuaU) ==--
 
-local Lighting = game:GetService("Lighting")
+local Lighting   = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local Players = game:GetService("Players")
-local NetworkClient = game:GetService("NetworkClient")
+local Workspace  = game:GetService("Workspace")
+local Players    = game:GetService("Players")
 
-local localPlayer = Players.LocalPlayer
-local pGui = localPlayer:WaitForChild("PlayerGui")
+local LocalPlayer = Players.LocalPlayer
 
--- == CONFIGURAÇÕES TÉCNICAS (CONSERTADO) == --
-local BRIGHTNESS_DAY = 0.2
-local BRIGHTNESS_NIGHT = 0.3
-local EXPOSURE_DAY = 0.2
-local EXPOSURE_NIGHT = 0.3
+--== Configurações de FullBright ==--
+local AMBIENT_CLR    = Color3.fromRGB(200, 200, 200)
+local OUTDOOR_CLR    = Color3.fromRGB(220, 220, 220)
+local BRIGHTNESS_VAL = 2.5 -- Valor corrigido para evitar erro de sintaxe
+local EXPOSURE_VAL   = 0.5
 
--- == 1. CRIAÇÃO DO RELÓGIO DO CELULAR (GUI) == --
-local ScreenGui = Instance.new("ScreenGui")
-local TimeLabel = Instance.new("TextLabel")
+--== Funções de Conversão (Materiais e Transparência) ==--
 
-ScreenGui.Name = "MigMaxClock"
-ScreenGui.Parent = pGui
-ScreenGui.IgnoreGuiInset = true
-
-TimeLabel.Name = "RelogioReal"
-TimeLabel.Parent = ScreenGui
-TimeLabel.Size = UDim2.new(0, 200, 0, 50)
-TimeLabel.Position = UDim2.new(0.5, -100, 0, 10) -- Topo central
-TimeLabel.BackgroundTransparency = 1
-TimeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TimeLabel.TextStrokeTransparency = 0
-TimeLabel.Font = Enum.Font.RobotoMono
-TimeLabel.TextSize = 15
-TimeLabel.Text = "00:00:00"
-
--- == 2. ANTILAG INVISÍVEL E REGRAS DE TRANSPARÊNCIA == --
-local function optimizeObject(obj)
-    -- Transparência 1 vira 0.75 (Revelação sem lag)
-    if obj:IsA("BasePart") or obj:IsA("Decal") then
-        if obj.Transparency >= 1 then
-            obj.Transparency = 0.7
+local function transformPart(part)
+    if part:IsA("BasePart") then
+        -- Tudo que era Transparency 1 vira 0.75
+        if part.Transparency == 1 then
+            part.Transparency = 0.75
+        end
+        -- Tudo que era Neon vira Ice
+        if part.Material == Enum.Material.Neon then
+            part.Material = Enum.Material.Ice
+        end
+    elseif part:IsA("Decal") or part:IsA("Texture") then
+        if part.Transparency == 1 then
+            part.Transparency = 0.75
         end
     end
-    -- Material Neon vira Ice (Estabilidade de FPS)
-    if obj:IsA("BasePart") and obj.Material == Enum.Material.Neon then
-        obj.Material = Enum.Material.Ice
-    end
-    -- Desativar sombras internas para Antilag
-    if obj:IsA("BasePart") then
-        obj.CastShadow = false
-    end
-    -- Desativar luzes físicas (FullBright Puro)
-    if obj:IsA("Light") then
-        obj.Enabled = false
+end
+
+--== Gerenciador de Luzes ==--
+
+local function disableLight(light)
+    if light:IsA("Light") or light:IsA("PointLight") or light:IsA("SurfaceLight") or light:IsA("SpotLight") then
+        light.Enabled = false
     end
 end
 
--- == 3. CORE ENGINE (FPS & INTERNET) == --
-local function coreEngine()
-    setfpscap(300) -- Desbloqueia 300 FPS Forçado
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level04
-    settings().Network.IncomingReplicationLag = -1000
-    
-    for _, item in ipairs(Workspace:GetDescendants()) do
-        optimizeObject(item)
+--== Sistema de Horário e Sino ==--
+
+local lastHour = -1
+local sinoSound = Instance.new("Sound")
+sinoSound.Name = "SinoHourNotify"
+sinoSound.SoundId = "rbxassetid://378977408"
+sinoSound.Volume = 1.0
+sinoSound.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local function updateClock()
+    local date = os.date("*t") -- Pega horário do sistema/celular
+    local hour = date.hour
+    local min  = date.min
+    local sec  = date.sec
+
+    -- Sincroniza o relógio do jogo com o real
+    Lighting.TimeOfDay = string.format("%02d:%02d:%02d", hour, min, sec)
+
+    -- Toca o sino se a hora mudou
+    if hour ~= lastHour then
+        if lastHour ~= -1 then -- Evita tocar assim que o script abre
+            sinoSound:Play()
+        end
+        lastHour = hour
     end
 end
 
--- == 4. HEARTBEAT LOOP (ATUALIZAÇÃO CONSTANTE) == --
+--== Inicialização de Varredura ==--
+
+for _, obj in ipairs(Workspace:GetDescendants()) do
+    transformPart(obj)
+    disableLight(obj)
+end
+
+Workspace.DescendantAdded:Connect(function(obj)
+    transformPart(obj)
+    disableLight(obj)
+end)
+
+--== Heartbeat Loop (Atualização Constante sem Lag) ==--
+
 RunService.Heartbeat:Connect(function()
-    -- Atualiza Relógio com horário do celular
-    local timeData = DateTime.now():ToLocalTime()
-    TimeLabel.Text = timeData:FormatLocalTime("LTS", "pt-br")
-    
-    -- Mantém FullBright e FPS
-    local isDay = Lighting.ClockTime >= 7 and Lighting.ClockTime <= 19
-    Lighting.Brightness = isDay and BRIGHTNESS_DAY or BRIGHTNESS_NIGHT
-    Lighting.ExposureCompensation = isDay and EXPOSURE_DAY or EXPOSURE_NIGHT
+    -- Mantém FullBright
+    Lighting.Brightness = BRIGHTNESS_VAL
+    Lighting.ExposureCompensation = EXPOSURE_VAL
     Lighting.GlobalShadows = false
+    Lighting.Ambient = AMBIENT_CLR
+    Lighting.OutdoorAmbient = OUTDOOR_CLR
+    Lighting.FogEnd = 999999
     
-    -- Antilag constante sem quebrar nada
-    settings().Rendering.EditQualityLevel = Enum.QualityLevel.Level04
+    -- Atualiza Horário do Celular no Jogo e verifica Sino
+    updateClock()
 end)
 
--- == 5. EVENTOS E INICIALIZAÇÃO == --
-Workspace.DescendantAdded:Connect(function(d)
-    task.wait(0.1)
-    optimizeObject(d)
-end)
+-- Remove Atmosfera para manter clareza total
+if Lighting:FindFirstChild("Atmosphere") then
+    Lighting.Atmosphere:Destroy()
+end
 
-coreEngine()
-
--- Streaming Permanente
-Workspace.StreamingEnabled = true
-Workspace.StreamingMinRadius = 64
-Workspace.StreamingTargetRadius = 1024
-
-print("Tudo pronto! Relógio ativo, 300 FPS e Antilag operando.")
+warn("Script Ativo: FullBright, Conversão de Materiais e Horário Real Sincronizado.")
