@@ -1,4 +1,4 @@
--- SCRIPT UNIFICADO: BRIGHT MODE + FOV CONTROL (MOTO E20/E40)
+-- SCRIPT SUPREMO UNIFICADO (MOTO E20/E40 - ZERO LAG)
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local camera = workspace.CurrentCamera
@@ -8,18 +8,13 @@ local targetFOV = 67.5
 local transitionTime = 4
 local checkInterval = 0.6
 
--- 1. Transição Inicial do FOV
-local fovTweenInfo = TweenInfo.new(transitionTime, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-local fovTween = TweenService:Create(camera, fovTweenInfo, {FieldOfView = targetFOV})
+local fovTween = TweenService:Create(camera, TweenInfo.new(transitionTime, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {FieldOfView = targetFOV})
 fovTween:Play()
 
--- Loop para manter o FOV rígido
 task.spawn(function()
     fovTween.Completed:Wait()
     while true do
-        if camera.FieldOfView ~= targetFOV then
-            camera.FieldOfView = targetFOV
-        end
+        if camera.FieldOfView ~= targetFOV then camera.FieldOfView = targetFOV end
         task.wait(checkInterval)
     end
 end)
@@ -46,45 +41,50 @@ local function IluminarTudo()
     if atmos then atmos:Destroy() end
 end
 
--- Ajuste de Partes e Materiais (Sem mexer em texturas)
+-- --- SISTEMA DE MATERIAIS E BLOQUEIO (SEM MODIFICAR TEXTURAS) ---
 local function AjustarObjeto(obj)
     if obj:IsA("Light") then
         obj.Enabled = false
     elseif obj:IsA("BasePart") then
         obj.CastShadow = false
         
-        -- Neon vira Ice
+        -- TRANSFORMA NEON EM ICE (CORRIGIDO)
         if obj.Material == Enum.Material.Neon then
             obj.Material = Enum.Material.Ice
         end
         
-        -- Invisível vira 0.8
+        -- INVISÍVEL FICA 0.8
         if obj.Transparency >= 0.98 then
             obj.Transparency = 0.8
         end
     end
 end
 
--- --- EXECUÇÃO OTIMIZADA ---
+-- --- EXECUÇÃO SEGURA PARA MOTOROLA (ANTI-TRAVAMENTO) ---
 IluminarTudo()
 
--- Varredura segura para Motorola E20/E40 (Anti-Lag)
 task.spawn(function()
     local descendants = workspace:GetDescendants()
     for i = 1, #descendants do
         AjustarObjeto(descendants[i])
-        if i % 40 == 0 then task.wait(0.1) end
+        -- Pausa a cada 25 itens para o Moto E20/E40 não congelar
+        if i % 25 == 0 then 
+            task.wait(0.1) 
+        end
     end
 end)
 
-workspace.DescendantAdded:Connect(AjustarObjeto)
+workspace.DescendantAdded:Connect(function(obj)
+    task.wait(0.1) -- Espera carregar para não dar pico de lag
+    AjustarObjeto(obj)
+end)
 
--- Loop de manutenção do clima (1 segundo)
+-- --- ATUALIZAÇÃO AUTOMÁTICA (CADA 0.5 SEGUNDOS) ---
 task.spawn(function()
     while true do
         IluminarTudo()
-        task.wait(1)
+        task.wait(0.5) -- ATUALIZAÇÃO RÁPIDA DE 0.5s CONFORME PEDIDO
     end
 end)
 
-print("Script Unificado: FOV 67.5 e Bright Mode Ativos!")
+print("Script Recriado: Neon->Ice | 0.5s Refresh | FOV 67.5 | Anti-Lag")
