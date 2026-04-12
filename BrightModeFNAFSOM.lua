@@ -1,7 +1,7 @@
 --[[
-    ENGINE INTEGRADA: PERFORMANCE + FULLBRIGHT + SINCRONIZAÇÃO
-    Usuário: MigMax
-    Configurações: 300 FPS, Texturas Nv4, Transparência 0.75, Sem Lag
+    Performance, Visual & Lighting Integrated Hub
+    Versão: Integrada para MigMax
+    Funcionalidades: 300 FPS, Texturas Nível 4, FullBright, Sino Real, Anti-Lag & Transparência 0.75
 ]]
 
 local Lighting = game:GetService("Lighting")
@@ -11,15 +11,16 @@ local Players = game:GetService("Players")
 local NetworkClient = game:GetService("NetworkClient")
 
 local localPlayer = Players.LocalPlayer
-if not game:IsLoaded() then game.Loaded:Wait() end
 
--- == CONFIGURAÇÕES DE ILUMINAÇÃO (FULLBRIGHT) == --
+-- == CONFIGURAÇÕES DE ILUMINAÇÃO == --
 local AMBIENT_CLR = Color3.fromRGB(200, 200, 200)
 local OUTDOOR_CLR = Color3.fromRGB(220, 220, 220)
-local BRIGHTNESS_DAY, BRIGHTNESS_NIGHT = 0.5, 0.5
-local EXPOSURE_DAY, EXPOSURE_NIGHT = 0.5, 0.5
+local BRIGHTNESS_DAY = 2.5
+local BRIGHTNESS_NIGHT = 0.5
+local EXPOSURE_DAY = 0.5
+local EXPOSURE_NIGHT = 0.5
 
--- == SISTEMA DE SOM (SINO) == --
+-- == SISTEMA DE SINO (HORA REAL) == --
 local lastHour = -1
 local SinoSound = Instance.new("Sound")
 SinoSound.Name = "SinoHourNotify"
@@ -27,46 +28,54 @@ SinoSound.Parent = localPlayer:WaitForChild("PlayerGui")
 SinoSound.SoundId = "rbxassetid://378977408"
 SinoSound.Volume = 1.0
 
--- == FUNÇÕES DE OTIMIZAÇÃO E VISIBILIDADE == --
+-- == FUNÇÕES DE OTIMIZAÇÃO E RENDERIZAÇÃO (ESTILO MIGMAX) == --
 
-local function OptimizeAndReveal()
-    -- Desbloqueio de FPS e Qualidade de Textura (Simulação Nível 4)
-    setfpscap(300)
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level04
+local function fastLoadAndBoost()
+    if not game:IsLoaded() then game.Loaded:Wait() end
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level04 -- Força comportamento Nível 4
+    setfpscap(300) -- Desbloqueia 300 FPS
     
+    -- Internet Boost
+    settings().Network.IncomingReplicationLag = -1000
+    if NetworkClient:FindFirstChild("ClientReplicator") then
+        NetworkClient.ClientReplicator.PriorityMethod = Enum.PriorityMethod.AccumulatedPriority
+    end
+end
+
+local function processObject(obj)
+    -- Regra de Transparência: 1 vira 0.75
+    if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then
+        if obj.Transparency == 1 then
+            obj.Transparency = 0.75
+        end
+    end
+    
+    -- Regra de Material: Neon vira Ice
+    if obj:IsA("BasePart") and obj.Material == Enum.Material.Neon then
+        obj.Material = Enum.Material.Ice
+    end
+    
+    -- Desativar Luzes Físicas
+    if obj:IsA("Light") then
+        obj.Enabled = false
+    end
+end
+
+local function applyGlobalChanges()
     for _, obj in ipairs(Workspace:GetDescendants()) do
-        -- Revelar itens invisíveis para 0.75 (Parts e Decals)
-        if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then
-            if obj.Transparency == 1 then
-                obj.Transparency = 0.75
-            end
-        end
-        
-        -- Desativar Luzes Físicas (Detector)
-        if obj:IsA("Light") then
-            obj.Enabled = false
-        end
+        processObject(obj)
     end
 end
 
-local function CheckRealTime()
-    local dt = DateTime.now():ToLocalTime()
-    local hour = dt.Hour
-    if hour ~= lastHour then
-        lastHour = hour
-        SinoSound:Play()
-    end
-end
-
-local function ApplyLightingSettings()
-    local isDay = Lighting.ClockTime >= 7 and Lighting.ClockTime <= 19
-    Lighting.Brightness = isDay and BRIGHTNESS_DAY or BRIGHTNESS_NIGHT
-    Lighting.ExposureCompensation = isDay and EXPOSURE_DAY or EXPOSURE_NIGHT
+-- == FULLBRIGHT PERMANENTE == --
+local function applyFullBright()
     Lighting.GlobalShadows = false
     Lighting.ShadowSoftness = 0
     Lighting.Ambient = AMBIENT_CLR
     Lighting.OutdoorAmbient = OUTDOOR_CLR
     Lighting.FogEnd = 999999
+    Lighting.FogStart = 0
+    Lighting.FogColor = Color3.new(0.9, 0.9, 0.9)
     
     if Lighting:FindFirstChild("Atmosphere") then
         Lighting.Atmosphere:Destroy()
@@ -74,41 +83,37 @@ local function ApplyLightingSettings()
 end
 
 -- == LOOP CONSTANTE (HEARTBEAT) == --
--- Tudo integrado aqui para rodar a cada quadro do jogo
 RunService.Heartbeat:Connect(function()
-    ApplyLightingSettings()
-    CheckRealTime()
+    -- 1. Controle de Iluminação Dinâmica
+    local isDay = Lighting.ClockTime >= 7 and Lighting.ClockTime <= 19
+    Lighting.Brightness = isDay and BRIGHTNESS_DAY or BRIGHTNESS_NIGHT
+    Lighting.ExposureCompensation = isDay and EXPOSURE_DAY or EXPOSURE_NIGHT
     
-    -- Mantém a força do 3D e texturas sempre ativa
+    -- 2. Garantia de Performance e Qualidade
     settings().Rendering.EditQualityLevel = Enum.QualityLevel.Level04
     
-    -- Internet Boost / Network Optimization
-    settings().Network.IncomingReplicationLag = -1000
+    -- 3. Checagem de Hora Real (Sino)
+    local dt = DateTime.now():ToLocalTime()
+    if dt.Hour ~= lastHour then
+        lastHour = dt.Hour
+        SinoSound:Play()
+    end
 end)
 
--- == MONITORAMENTO DE NOVOS OBJETOS (ANTILAG E REVELAÇÃO) == --
-Workspace.DescendantAdded:Connect(function(obj)
-    task.wait(0.1)
-    if (obj:IsA("BasePart") or obj:IsA("Decal")) and obj.Transparency == 1 then
-        obj.Transparency = 0.75
-    end
-    if obj:IsA("Light") then
-        obj.Enabled = false
-    end
+-- == MONITORAMENTO DE NOVOS OBJETOS (MAPA) == --
+Workspace.DescendantAdded:Connect(function(descendant)
+    task.wait(0.1) -- Pequeno delay para o motor carregar a propriedade
+    processObject(descendant)
 end)
 
 -- == INICIALIZAÇÃO == --
-local function Start()
-    OptimizeAndReveal()
-    ApplyLightingSettings()
-end
+fastLoadAndBoost()
+applyFullBright()
+applyGlobalChanges()
 
-Start()
+-- Streaming Mode Permanente (Simulação)
+Workspace.StreamingEnabled = true
+Workspace.StreamingMinRadius = 64
+Workspace.StreamingTargetRadius = 1024
 
--- Auto-recolocar ao spawnar
-localPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
-    Start()
-end)
-
-print("Script Integrado MigMax: Performance 300 FPS + FullBright + Transparência 0.75 Ativos.")
+print("MigMax Hub: FullBright, 300 FPS e Conversão de Materiais Ativada.")
