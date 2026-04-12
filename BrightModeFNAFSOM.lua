@@ -1,73 +1,83 @@
--- BRIGHT MODE DEFINITIVO (MOTO E20/E40 & DELTA)
-local Lighting = game:GetService("Lighting")
+local a = game:GetService("RunService")
+local b = game:GetService("Lighting")
+local c = game:GetService("Workspace")
+local d = game:GetService("Terrain")
 
--- 1. ILUMINAÇÃO TOTAL E REMOÇÃO DE ESCURIDÃO
-local function IluminarTudo()
-    Lighting.Brightness = 0
-    Lighting.GlobalShadows = false
-    Lighting.Ambient = Color3.new(1, 1, 1)
-    Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
-    
-    -- Ajuste de Exposição Instantâneo (Sem transição suave)
-    local hora = Lighting.ClockTime
-    if hora >= 6 and hora <= 18 then
-        Lighting.ExposureCompensation = 0.5 -- Dia
+local function e(f)
+    if f:IsA("BasePart") then
+        f.Reflectance = 0
+        f.CastShadow = false
+        if f.Material == Enum.Material.Neon then
+            f.Material = Enum.Material.Ice
+        end
+        if f.Transparency >= 0.98 then
+            f.Transparency = 0.8
+        end
+    elseif f:IsA("MeshPart") then
+        f.Reflectance = 0
+        f.TextureID = ""
+    elseif f:IsA("DataModelMesh") or f:IsA("CharacterMesh") then
+        f.TextureId = ""
+    elseif f:IsA("Texture") or f:IsA("Decal") then
+        f.Transparency = 1
+    elseif f:IsA("SpecialMesh") then
+        f.TextureId = ""
+    elseif f:IsA("Light") then
+        f.Enabled = false
+    end
+end
+
+local function h()
+    b.Brightness = 0
+    b.GlobalShadows = false
+    b.Ambient = Color3.new(1, 1, 1)
+    b.OutdoorAmbient = Color3.new(1, 1, 1)
+    local i = b.ClockTime
+    if i >= 6 and i <= 18 then
+        b.ExposureCompensation = 0.0
     else
-        Lighting.ExposureCompensation = 0.8 -- Noite
+        b.ExposureCompensation = 0.0
     end
-
-    -- Remove Fog e Atmosfera que causam sombras/lag
-    Lighting.FogEnd = 999999
-    Lighting.FogStart = 0
-    local atmos = Lighting:FindFirstChildOfClass("Atmosphere")
-    if atmos then atmos:Destroy() end
+    b.FogEnd = 999999
+    b.FogStart = 0
+    local j = b:FindFirstChildOfClass("Atmosphere")
+    if j then j:Destroy() end
 end
 
--- 2. AJUSTE DE MATERIAIS (PRESERVANDO TEXTURAS)
-local function AjustarObjeto(obj)
-    -- Bloqueia luzes (PointLight, SpotLight, etc)
-    if obj:IsA("Light") then
-        obj.Enabled = false
-    end
-    
-    if obj:IsA("BasePart") then
-        -- Remove sombras projetadas sem mexer na textura original
-        obj.CastShadow = false
-        
-        -- Materiais específicos
-        if obj.Material == Enum.Material.Neon then
-            obj.Material = Enum.Material.Ice
-        end
-        
-        -- Objetos invisíveis ficam 0.8 (Como pedido)
-        if obj.Transparency >= 0.98 then
-            obj.Transparency = 0.8
-        end
-    end
-end
+settings().Rendering.QualityLevel = 2
+c.StreamingEnabled = true
+c.StreamingMinRadius = 32
+c.StreamingTargetRadius = 64
 
--- 3. EXECUÇÃO INSTANTÂNEA E OTIMIZADA
-IluminarTudo()
+d.WaterWaveSize = 0
+d.WaterWaveSpeed = 0
+d.WaterReflectance = 0
+d.WaterTransparency = 0
 
--- Varredura segura para não travar o celular
+h()
+
 task.spawn(function()
-    local descendants = workspace:GetDescendants()
-    for i = 1, #descendants do
-        AjustarObjeto(descendants[i])
-        -- Pausa pequena a cada 40 itens para manter o FPS estável
-        if i % 40 == 0 then task.wait(0.1) end
+    local k = game:GetDescendants()
+    for l = 1, #k do
+        e(k[l])
+        if l % 40 == 0 then task.wait(0.1) end
     end
 end)
 
--- Monitora novos objetos que entrarem no mapa
-workspace.DescendantAdded:Connect(AjustarObjeto)
+game.DescendantAdded:Connect(e)
 
--- 4. MANUTENÇÃO AUTOMÁTICA (RECOLOCA CADA 1 SEGUNDO)
 task.spawn(function()
     while true do
-        IluminarTudo()
+        h()
         task.wait(1)
     end
 end)
 
-print("Bright Mode Recriado: Tudo Iluminado!")
+a.Heartbeat:Connect(function()
+    sethiddenproperty(c, "StreamingPauseMode", 2)
+    for m, n in pairs(b:GetChildren()) do
+        if n:IsA("PostEffect") or n:IsA("BloomEffect") or n:IsA("BlurEffect") or n:IsA("SunRaysEffect") then
+            n.Enabled = false
+        end
+    end
+end)
