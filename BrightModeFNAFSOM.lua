@@ -75,7 +75,7 @@ end
 -- 6. LOOP CONSTANTE (HEARTBEAT - SEM LAG)
 RunService.Heartbeat:Connect(function()
     -- Manutenção do FullBright
-    Lighting.Brightness = 2.5
+    Lighting.Brightness = 0
     Lighting.ExposureCompensation = 0.5
     Lighting.GlobalShadows = false
     Lighting.Ambient = Color3.fromRGB(200, 200, 200)
