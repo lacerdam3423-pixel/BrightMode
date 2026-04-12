@@ -67,7 +67,7 @@ local function applyVisualOptimization()
         -- Revelar Transparência 1 -> 0 (Decais e Partes)
         if (obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture")) then
             if obj.Transparency == 1 then
-                obj.Transparency = 0.5
+                obj.Transparency = 0.75
             end
         end
         
