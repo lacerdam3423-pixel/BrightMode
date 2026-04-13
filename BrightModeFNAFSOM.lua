@@ -40,9 +40,9 @@ local function UpdateExposure()
     
     local time = Lighting.ClockTime
     if time >= 6 and time <= 18 then
-        Lighting.ExposureCompensation = 0.1
-    else
         Lighting.ExposureCompensation = 0.2
+    else
+        Lighting.ExposureCompensation = 0.4
     end
 end
 
