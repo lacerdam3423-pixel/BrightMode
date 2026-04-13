@@ -1,63 +1,47 @@
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 local NetworkClient = game:GetService("NetworkClient")
-local RunService = game:GetService("RunService")
 
 setfpscap(200)
 
-local function OptimizeMap()
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            obj.Reflectance = 0
-            if obj.Transparency == 1 then
-                obj.Transparency = 0.8
-            end
-        end
-        if obj:IsA("DataModelMesh") or obj:IsA("MeshPart") then
-            if obj:IsA("MeshPart") then obj.Reflectance = 0 end
-        end
-    end
-end
-
-local function SystemBoost()
-    settings().Network.IncomingReplicationLag = -1000
-    NetworkClient:SetOutgoingKBPSLimit(0)
-    
-    if Workspace.StreamingEnabled then
-        Workspace.StreamingMinRadius = 1e6
-        Workspace.StreamingTargetRadius = 1e6
-    end
-    
-    settings().Rendering.QualityLevel = 1
-    Lighting.Technology = Enum.Technology.Compatibility
-end
-
-local function UpdateExposure()
-    Lighting.Brightness = 2
-    Lighting.GlobalShadows = false
-    Lighting.FogEnd = 1e9
-    Lighting.FogStart = 0
-    
-    local time = Lighting.ClockTime
-    if time >= 6 and time <= 18 then
-        Lighting.ExposureCompensation = 0.2
-    else
-        Lighting.ExposureCompensation = 0.4
-    end
-end
-
-SystemBoost()
-OptimizeMap()
-
-RunService.RenderStepped:Connect(function()
-    UpdateExposure()
-end)
-
-Workspace.DescendantAdded:Connect(function(obj)
+local function OptimizeObject(obj)
     if obj:IsA("BasePart") then
         obj.Reflectance = 0
         if obj.Transparency == 1 then
             obj.Transparency = 0.8
         end
     end
-end)
+end
+
+for _, obj in ipairs(Workspace:GetDescendants()) do
+    OptimizeObject(obj)
+end
+
+Workspace.DescendantAdded:Connect(OptimizeObject)
+
+settings().Network.IncomingReplicationLag = -1000
+NetworkClient:SetOutgoingKBPSLimit(0)
+
+if Workspace.StreamingEnabled then
+    Workspace.StreamingMinRadius = 1e6
+    Workspace.StreamingTargetRadius = 1e6
+end
+
+local function UpdateLighting()
+    Lighting.Brightness = 0
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 1e6
+    Lighting.FogStart = 0
+    
+    local isDay = Lighting.ClockTime >= 6 and Lighting.ClockTime <= 18
+    Lighting.ExposureCompensation = isDay and 0.2 or 0.4
+end
+
+UpdateLighting()
+Lighting:GetPropertyChangedSignal("ClockTime"):Connect(UpdateLighting)
+
+for _, effect in ipairs(Lighting:GetChildren()) do
+    if effect:IsA("PostProcessEffect") or effect:IsA("BloomEffect") or effect:IsA("BlurEffect") then
+        effect.Enabled = false
+    end
+end
