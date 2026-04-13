@@ -5,56 +5,59 @@ local RunService = game:GetService("RunService")
 
 setfpscap(200)
 
-local function OptimizeObject(obj)
-    if obj:IsA("BasePart") then
-        obj.Reflectance = 0
-        if obj.Transparency == 1 then
-            obj.Transparency = 0.8
+local function OptimizeMap()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            obj.Reflectance = 0
+            if obj.Transparency == 1 then
+                obj.Transparency = 0.8
+            end
         end
-    elseif obj:IsA("DataModelMesh") or obj:IsA("SpecialMesh") then
-        obj.VertexColor = Vector3.new(1, 1, 1)
-    elseif obj:IsA("Decal") or obj:IsA("Texture") then
-        obj.Transparency = 0.5
+        if obj:IsA("DataModelMesh") or obj:IsA("MeshPart") then
+            if obj:IsA("MeshPart") then obj.Reflectance = 0 end
+        end
     end
 end
 
-local function ApplyWorldSettings()
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        OptimizeObject(obj)
-    end
-    
-    if Workspace.StreamingEnabled then
-        Workspace.StreamingMinRadius = 10000
-        Workspace.StreamingTargetRadius = 10000
-    end
-    
+local function SystemBoost()
     settings().Network.IncomingReplicationLag = -1000
     NetworkClient:SetOutgoingKBPSLimit(0)
+    
+    if Workspace.StreamingEnabled then
+        Workspace.StreamingMinRadius = 1e6
+        Workspace.StreamingTargetRadius = 1e6
+    end
+    
+    settings().Rendering.QualityLevel = 1
+    Lighting.Technology = Enum.Technology.Compatibility
 end
 
-local function UpdateLighting()
-    Lighting.Brightness = 0
+local function UpdateExposure()
+    Lighting.Brightness = 2
     Lighting.GlobalShadows = false
-    Lighting.FogEnd = 1e6
-    Lighting.FogStart = 0
+    Lighting.FogEnd = 1e9
+    Lighting.FogStart = 1e9
     
-    if Lighting.ClockTime >= 6 and Lighting.ClockTime <= 18 then
+    local time = Lighting.ClockTime
+    if time >= 6 and time <= 18 then
         Lighting.ExposureCompensation = 0.1
     else
         Lighting.ExposureCompensation = 0.2
     end
 end
 
-ApplyWorldSettings()
-UpdateLighting()
+SystemBoost()
+OptimizeMap()
 
-Lighting:GetPropertyChangedSignal("ClockTime"):Connect(UpdateLighting)
-Workspace.DescendantAdded:Connect(OptimizeObject)
+RunService.RenderStepped:Connect(function()
+    UpdateExposure()
+end)
 
-if Lighting:FindFirstChildOfClass("PostProcessEffect") then
-    for _, effect in ipairs(Lighting:GetChildren()) do
-        if effect:IsA("PostProcessEffect") then
-            effect.Enabled = false
+Workspace.DescendantAdded:Connect(function(obj)
+    if obj:IsA("BasePart") then
+        obj.Reflectance = 0
+        if obj.Transparency == 1 then
+            obj.Transparency = 0.8
         end
     end
-end
+end)
