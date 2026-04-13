@@ -1,70 +1,80 @@
--- Mayura Engine: Pure Vision & FPS Boost
--- Criado por MigMax ;]
+--// Bright Mode Exposure + AntiLag (Universal)
 
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 
--- [ CONFIGURAÇÕES EDITÁVEIS ]
-local Settings = {
-    ExposureDay = 0.2,        -- Brilho durante o dia
-    ExposureNight = 0.5,      -- Brilho durante a noite
-    TargetFPS = 200,          -- Limite de FPS
-    TransparencyCap = 0.7,    -- Torna o invisível visível (1 -> 0.7)
-    ReflectionValue = 0       -- Zero reflexos para performance
-}
+-- CONFIG
+local DAY_EXPOSURE = 0.1
+local NIGHT_EXPOSURE = 0.3
+local MIDDAY_EXPOSURE = 0.2
+local MIDNIGHT_EXPOSURE = 0.4
 
--- [ DESBLOQUEAR FPS ]
-if setfpscap then
-    setfpscap(Settings.TargetFPS)
+-- Função para limpar efeitos visuais
+local function removeEffects()
+	for _, v in pairs(Lighting:GetChildren()) do
+		if v:IsA("PostEffect") 
+		or v:IsA("BloomEffect")
+		or v:IsA("SunRaysEffect")
+		or v:IsA("ColorCorrectionEffect")
+		or v:IsA("BlurEffect")
+		or v:IsA("DepthOfFieldEffect") then
+			v:Destroy()
+		end
+	end
 end
 
--- [ LOOP DE OTIMIZAÇÃO (HEARTBEAT) ]
-RunService.Heartbeat:Connect(function()
-    -- 1. Controle de Iluminação (Bright Mode & No Fog)
-    Lighting.GlobalShadows = false
-    Lighting.FogEnd = 999999
-    Lighting.Brightness = 0
-    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-    Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-    
-    -- Exposure Day/Night dinâmico
-    if Lighting.ClockTime >= 6 and Lighting.ClockTime <= 18 then
-        Lighting.ExposureCompensation = Settings.ExposureDay
-    else
-        Lighting.ExposureCompensation = Settings.ExposureNight
-    end
+-- Função principal Bright Mode
+local function applyBrightMode()
+	-- Remove efeitos
+	removeEffects()
 
-    -- 2. Limpeza de Materiais e Transparência
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        -- Remove reflexos e sombras de partes e meshes
-        if obj:IsA("BasePart") then
-            obj.Reflectance = Settings.ReflectionValue
-            obj.CastShadow = false
-            
-            -- Revelar objetos ocultos/invisíveis
-            if obj.Transparency >= 1 then
-                obj.Transparency = Settings.TransparencyCap
-            end
-        end
+	-- Iluminação leve e limpa
+	Lighting.GlobalShadows = false
+	Lighting.FogEnd = 1000000
+	Lighting.FogStart = 0
+	Lighting.FogColor = Color3.new(1,1,1)
 
-        -- Otimização de Terreno e Água
-        if obj:IsA("Terrain") then
-            obj.WaterReflectance = 0
-            obj.WaterTransparency = 1
-            obj.WaterWaveSize = 0
-            obj.WaterWaveSpeed = 0
-        end
-        
-        -- Desativa efeitos pesados de pós-processamento
-        if obj:IsA("PostProcessEffect") or obj:IsA("BloomEffect") or obj:IsA("BlurEffect") or obj:IsA("Atmosphere") then
-            obj.Enabled = false
-        end
-    end
+	Lighting.Brightness = 0.55
+	Lighting.EnvironmentDiffuseScale = 0
+	Lighting.EnvironmentSpecularScale = 0
+	Lighting.Ambient = Color3.fromRGB(200,200,200)
+	Lighting.OutdoorAmbient = Color3.fromRGB(200,200,200)
+
+	-- NÃO fixa horário
+	-- Ajuste dinâmico por hora do jogo
+	local time = Lighting.ClockTime
+
+	if time >= 6 and time < 12 then
+		Lighting.ExposureCompensation = DAY_EXPOSURE
+	elseif time >= 12 and time < 18 then
+		Lighting.ExposureCompensation = MIDDAY_EXPOSURE
+	elseif time >= 18 and time < 24 then
+		Lighting.ExposureCompensation = NIGHT_EXPOSURE
+	else
+		Lighting.ExposureCompensation = MIDNIGHT_EXPOSURE
+	end
+end
+
+-- Auto reaplicar (anti reset / streaming)
+task.spawn(function()
+	while true do
+		applyBrightMode()
+		task.wait(2)
+	end
 end)
 
--- [ FORÇAR PERFORMANCE GRÁFICA ]
-settings().Rendering.QualityLevel = Enum.QualityLevel.Level02
-settings().Rendering.EditQualityLevel = Enum.QualityLevel.Level02
+-- Atualiza conforme muda o horário
+Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+	applyBrightMode()
+end)
 
-print("Mayura Engine: Pure Performance & Full Bright Ativado!")
+-- Segurança extra (caso jogo tente recriar efeitos)
+Lighting.ChildAdded:Connect(function(child)
+	if child:IsA("PostEffect") then
+		task.wait()
+		child:Destroy()
+	end
+end)
+
+-- Inicial
+applyBrightMode()
