@@ -36,9 +36,9 @@ local function h()
     b.OutdoorAmbient = Color3.new(1, 1, 1)
     local i = b.ClockTime
     if i >= 6 and i <= 18 then
-        b.ExposureCompensation = 0.1
+        b.ExposureCompensation = 0.5
     else
-        b.ExposureCompensation = 0.2
+        b.ExposureCompensation = 0.8
     end
     b.FogEnd = 9e9
     b.FogStart = 0
@@ -46,17 +46,15 @@ local function h()
     if j then j:Destroy() end
 end
 
-settings().Rendering.QualityLevel = 2
+settings().Rendering.QualityLevel = 1
 c.StreamingEnabled = true
 c.StreamingMinRadius = 32
 c.StreamingTargetRadius = 64
 
-if d then
-    d.WaterWaveSize = 0
-    d.WaterWaveSpeed = 0
-    d.WaterReflectance = 0
-    d.WaterTransparency = 0
-end
+d.WaterWaveSize = 0
+d.WaterWaveSpeed = 0
+d.WaterReflectance = 0
+d.WaterTransparency = 0
 
 h()
 
@@ -64,7 +62,7 @@ task.spawn(function()
     local k = game:GetDescendants()
     for l = 1, #k do
         e(k[l])
-        if l % 100 == 0 then task.wait() end
+        if l % 50 == 0 then task.wait() end
     end
 end)
 
