@@ -1,18 +1,17 @@
--- Mayura Engine: Extreme Vision & Performance Hub
+-- Mayura Engine: Pure Vision & FPS Boost
 -- Criado por MigMax ;]
 
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local UserInputService = game:GetService("UserInputService")
 
 -- [ CONFIGURAÇÕES EDITÁVEIS ]
 local Settings = {
-    ExposureDay = 0.0,        -- Exposição durante o dia
-    ExposureNight = 0.02,      -- Exposição durante a noite (mais alta para ver tudo)
-    TargetFPS = 200,          -- Desbloqueio de FPS
-    TransparencyCap = 0.7,    -- O que era 1 (invisível) vira 0.7
-    ReflectionValue = 0       -- Reflexo em BaseParts/MeshParts e Água
+    ExposureDay = 0.2,        -- Brilho durante o dia
+    ExposureNight = 0.5,      -- Brilho durante a noite
+    TargetFPS = 200,          -- Limite de FPS
+    TransparencyCap = 0.7,    -- Torna o invisível visível (1 -> 0.7)
+    ReflectionValue = 0       -- Zero reflexos para performance
 }
 
 -- [ DESBLOQUEAR FPS ]
@@ -20,62 +19,52 @@ if setfpscap then
     setfpscap(Settings.TargetFPS)
 end
 
--- [ FUNÇÃO PRINCIPAL DE RENDERIZAÇÃO (LOOP) ]
+-- [ LOOP DE OTIMIZAÇÃO (HEARTBEAT) ]
 RunService.Heartbeat:Connect(function()
-    -- 1. Iluminação e Bright Mode (Sem ClockTime Fixo)
+    -- 1. Controle de Iluminação (Bright Mode & No Fog)
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 999999
     Lighting.Brightness = 0
     Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     Lighting.Ambient = Color3.fromRGB(255, 255, 255)
     
-    -- Dinâmica de Exposure Day/Night
+    -- Exposure Day/Night dinâmico
     if Lighting.ClockTime >= 6 and Lighting.ClockTime <= 18 then
         Lighting.ExposureCompensation = Settings.ExposureDay
     else
         Lighting.ExposureCompensation = Settings.ExposureNight
     end
 
-    -- 2. Manipulação de Partes e Materiais (Universal)
+    -- 2. Limpeza de Materiais e Transparência
     for _, obj in pairs(Workspace:GetDescendants()) do
-        -- BaseParts e MeshParts: Sem Reflexo
+        -- Remove reflexos e sombras de partes e meshes
         if obj:IsA("BasePart") then
             obj.Reflectance = Settings.ReflectionValue
             obj.CastShadow = false
             
-            -- Ajuste de Transparência (Invisível -> Semi-visível)
+            -- Revelar objetos ocultos/invisíveis
             if obj.Transparency >= 1 then
                 obj.Transparency = Settings.TransparencyCap
             end
         end
 
-        -- Configuração de Água
+        -- Otimização de Terreno e Água
         if obj:IsA("Terrain") then
             obj.WaterReflectance = 0
             obj.WaterTransparency = 1
-            obj.WaterWaveSize = 0.01 -- Ondas mínimas para estabilidade
-            obj.WaterWaveSpeed = 0.05
+            obj.WaterWaveSize = 0
+            obj.WaterWaveSpeed = 0
         end
         
-        -- Remover Efeitos de Iluminação Suave
-        if obj:IsA("PostProcessEffect") or obj:IsA("BloomEffect") or obj:IsA("BlurEffect") then
+        -- Desativa efeitos pesados de pós-processamento
+        if obj:IsA("PostProcessEffect") or obj:IsA("BloomEffect") or obj:IsA("BlurEffect") or obj:IsA("Atmosphere") then
             obj.Enabled = false
         end
     end
 end)
 
--- [ INTERNET & SIMULAÇÃO ADMIN ]
--- Melhora a prioridade de pacotes e reduz latência visual
-settings().Network.IncomingReplicationLag = -1000
-if game:GetService("NetworkClient"):FindFirstChild("ClientReplicator") then
-    game:GetService("NetworkClient").ClientReplicator.RuntimeOptimized = true
-end
+-- [ FORÇAR PERFORMANCE GRÁFICA ]
+settings().Rendering.QualityLevel = Enum.QualityLevel.Level02
+settings().Rendering.EditQualityLevel = Enum.QualityLevel.Level02
 
--- Simulação de privilégios (Libera comandos locais de desenvolvedor)
-local Player = game.Players.LocalPlayer
-Player.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Invisicam
-if not Player:IsFriendsWith(1) then -- Dummy check para forçar flags de permissão local
-    print("Mayura Engine: Admin Privileges Simulated.")
-end
-
-print("Mayura Engine: Full Bright & 200 FPS Active!")
+print("Mayura Engine: Pure Performance & Full Bright Ativado!")
