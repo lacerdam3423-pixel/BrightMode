@@ -36,9 +36,9 @@ local function h()
     b.OutdoorAmbient = Color3.new(1, 1, 1)
     local i = b.ClockTime
     if i >= 6 and i <= 18 then
-        b.ExposureCompensation = 0.5
+        b.ExposureCompensation = 0.1
     else
-        b.ExposureCompensation = 0.8
+        b.ExposureCompensation = 0.2
     end
     b.FogEnd = 9e9
     b.FogStart = 0
