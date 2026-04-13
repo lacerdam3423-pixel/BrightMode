@@ -36,7 +36,7 @@ local function UpdateExposure()
     Lighting.Brightness = 2
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 1e9
-    Lighting.FogStart = 1e9
+    Lighting.FogStart = 0
     
     local time = Lighting.ClockTime
     if time >= 6 and time <= 18 then
