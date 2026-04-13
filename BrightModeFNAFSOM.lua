@@ -9,7 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 -- [ CONFIGURAÇÕES EDITÁVEIS ]
 local Settings = {
     ExposureDay = 0.0,        -- Exposição durante o dia
-    ExposureNight = 0.0,      -- Exposição durante a noite (mais alta para ver tudo)
+    ExposureNight = 0.02,      -- Exposição durante a noite (mais alta para ver tudo)
     TargetFPS = 200,          -- Desbloqueio de FPS
     TransparencyCap = 0.7,    -- O que era 1 (invisível) vira 0.7
     ReflectionValue = 0       -- Reflexo em BaseParts/MeshParts e Água
@@ -24,8 +24,8 @@ end
 RunService.Heartbeat:Connect(function()
     -- 1. Iluminação e Bright Mode (Sem ClockTime Fixo)
     Lighting.GlobalShadows = false
-    Lighting.FogEnd = 9e9
-    Lighting.Brightness = 1
+    Lighting.FogEnd = 999999
+    Lighting.Brightness = 0
     Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     Lighting.Ambient = Color3.fromRGB(255, 255, 255)
     
