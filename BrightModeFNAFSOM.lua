@@ -36,11 +36,11 @@ local function h()
     b.OutdoorAmbient = Color3.new(1, 1, 1)
     local i = b.ClockTime
     if i >= 6 and i <= 18 then
-        b.ExposureCompensation = 0.2
+        b.ExposureCompensation = 0.5
     else
-        b.ExposureCompensation = 0.4
+        b.ExposureCompensation = 0.8
     end
-    b.FogEnd = 99999
+    b.FogEnd = 9e9
     b.FogStart = 0
     local j = b:FindFirstChildOfClass("Atmosphere")
     if j then j:Destroy() end
