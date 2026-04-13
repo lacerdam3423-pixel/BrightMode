@@ -38,13 +38,13 @@ local function h()
     else
         b.ExposureCompensation = 0.2
     end
-    b.FogEnd = 999999
+    b.FogEnd = 9e9
     b.FogStart = 0
     local j = b:FindFirstChildOfClass("Atmosphere")
     if j then j:Destroy() end
 end
 
-settings().Rendering.QualityLevel = 2
+settings().Rendering.QualityLevel = 3
 c.StreamingEnabled = true
 c.StreamingMinRadius = 32
 c.StreamingTargetRadius = 64
@@ -74,7 +74,9 @@ task.spawn(function()
 end)
 
 a.Heartbeat:Connect(function()
-    sethiddenproperty(c, "StreamingPauseMode", 2)
+    pcall(function()
+        sethiddenproperty(c, "StreamingPauseMode", 2)
+    end)
     for m, n in pairs(b:GetChildren()) do
         if n:IsA("PostEffect") or n:IsA("BloomEffect") or n:IsA("BlurEffect") or n:IsA("SunRaysEffect") then
             n.Enabled = false
