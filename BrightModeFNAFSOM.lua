@@ -8,8 +8,8 @@ local UserInputService = game:GetService("UserInputService")
 
 -- [ CONFIGURAÇÕES EDITÁVEIS ]
 local Settings = {
-    ExposureDay = 0.2,        -- Exposição durante o dia
-    ExposureNight = 0.5,      -- Exposição durante a noite (mais alta para ver tudo)
+    ExposureDay = 0.0,        -- Exposição durante o dia
+    ExposureNight = 0.2,      -- Exposição durante a noite (mais alta para ver tudo)
     TargetFPS = 200,          -- Desbloqueio de FPS
     TransparencyCap = 0.7,    -- O que era 1 (invisível) vira 0.7
     ReflectionValue = 0       -- Reflexo em BaseParts/MeshParts e Água
