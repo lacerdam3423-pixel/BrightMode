@@ -1,115 +1,118 @@
---// ULTRA BRIGHT MODE + ANTILAG (Exposure Only)
---// Coloque em StarterPlayerScripts
-
+--// SERVICES
 local Lighting = game:GetService("Lighting")
-local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
 local player = Players.LocalPlayer
 
 --// CONFIG
-local TARGET_FPS = 200
-local RENDER_DISTANCE = 1000
+local CONFIG = {
+    ExposureDay = 0.2,
+    ExposureNight = 0.55,
+    Brightness = 0.2,
+    MaxDistance = 1000,
+    FPSCap = 200
+}
 
---// FUNÇÃO: LIMPAR EFEITOS
-local function cleanEffects()
-	for _, v in pairs(Lighting:GetChildren()) do
-		if v:IsA("PostEffect") then
-			v:Destroy()
-		end
-	end
+--// ===== BRIGHT MODE (EXPOSURE ONLY) =====
+local function applyBrightness()
+    Lighting.GlobalShadows = false
+    Lighting.Brightness = CONFIG.Brightness
 
-	-- Remover neblina
-	Lighting.FogEnd = 9999999
-	Lighting.FogStart = 0
-	Lighting.FogColor = Color3.new(1,1,1)
+    -- Remove fog
+    Lighting.FogEnd = 999999999
+    Lighting.FogStart = 0
 
-	-- Remover sombras e suavização
-	Lighting.GlobalShadows = false
-	Lighting.Technology = Enum.Technology.Compatibility
-	Lighting.EnvironmentDiffuseScale = 0
-	Lighting.EnvironmentSpecularScale = 0
-	Lighting.ShadowSoftness = 0
+    -- Exposure control
+    Lighting.ExposureCompensation = CONFIG.ExposureDay
+
+    -- Mantém ambiente neutro
+    Lighting.EnvironmentDiffuseScale = 0
+    Lighting.EnvironmentSpecularScale = 0
 end
 
---// FUNÇÃO: REMOVER LUZES PESADAS
-local function removeLights()
-	for _, v in pairs(Workspace:GetDescendants()) do
-		if v:IsA("PointLight") 
-		or v:IsA("SpotLight") 
-		or v:IsA("SurfaceLight") then
-			v:Destroy()
-		end
-	end
+--// ===== REMOVE EFFECTS =====
+local function removeEffects()
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("BloomEffect")
+        or v:IsA("BlurEffect")
+        or v:IsA("ColorCorrectionEffect")
+        or v:IsA("SunRaysEffect")
+        or v:IsA("DepthOfFieldEffect") then
+            v:Destroy()
+        end
+    end
 end
 
---// FUNÇÃO: BRIGHT MODE (EXPOSURE BASED)
-local function applyExposure()
-	Lighting.ClockTime = Lighting.ClockTime -- não fixa o tempo
-	
-	-- Exposure natural (sem cegar)
-	Lighting.ExposureCompensation = 0.35
-	
-	-- Ajuste dinâmico dia/noite
-	local function updateExposure()
-		local time = Lighting.ClockTime
-		
-		if time >= 6 and time <= 18 then
-			-- Dia
-			Lighting.ExposureCompensation = 0.23
-		else
-			-- Noite (mais visível)
-			Lighting.ExposureCompensation = 0.6
-		end
-	end
-	
-	updateExposure()
-	
-	-- Atualizar automaticamente
-	task.spawn(function()
-		while true do
-			updateExposure()
-			task.wait(2)
-		end
-	end)
+--// ===== REMOVE LIGHT OBJECTS =====
+local function removeLights(obj)
+    if obj:IsA("PointLight")
+    or obj:IsA("SpotLight")
+    or obj:IsA("SurfaceLight") then
+        obj:Destroy()
+    end
 end
 
---// FUNÇÃO: ANTI-LAG SEM QUEBRAR TEXTURAS
-local function optimizeWorld()
-	Workspace.StreamingEnabled = true
-	Workspace.StreamingTargetRadius = RENDER_DISTANCE
-	
-	-- Não mexe nas texturas (mantém qualidade)
-	settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+local function cleanLights()
+    for _, v in pairs(Workspace:GetDescendants()) do
+        removeLights(v)
+    end
 end
 
---// FUNÇÃO: REAPLICAR (ANTI RESET)
-local function autoReapply()
-	Lighting.ChildAdded:Connect(function()
-		task.wait()
-		cleanEffects()
-	end)
+-- Auto remover novos
+Workspace.DescendantAdded:Connect(removeLights)
+
+--// ===== ANTI LAG (SEM REMOVER TEXTURA) =====
+local function applyAntiLag()
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+
+    -- NÃO mexe em textura (mantém 4K)
+    Lighting.Technology = Enum.Technology.Compatibility
 end
 
---// FPS BOOST (limitador leve)
-local RunService = game:GetService("RunService")
-local last = tick()
+--// ===== STREAMING BOOST =====
+local function applyStreaming()
+    if Workspace.StreamingEnabled then
+        Workspace.StreamingTargetRadius = CONFIG.MaxDistance
+        Workspace.StreamingMinRadius = CONFIG.MaxDistance
+    end
+end
 
+--// ===== AUTO REAPPLY =====
+local function fullApply()
+    applyBrightness()
+    removeEffects()
+    cleanLights()
+    applyAntiLag()
+    applyStreaming()
+end
+
+-- Executa instantâneo
+fullApply()
+
+-- Reaplica constantemente (evita scripts do jogo resetarem)
 RunService.RenderStepped:Connect(function()
-	local now = tick()
-	local delta = now - last
-	
-	if delta < (1 / TARGET_FPS) then
-		task.wait((1 / TARGET_FPS) - delta)
-	end
-	
-	last = tick()
+    Lighting.ExposureCompensation = CONFIG.ExposureDay
 end)
 
---// EXECUÇÃO INSTANTÂNEA
-cleanEffects()
-removeLights()
-applyExposure()
-optimizeWorld()
-autoReapply()
+-- Respawn
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    fullApply()
+end)
 
-print("✔ Bright Mode Ultra + AntiLag Ativado")
+--// ===== FPS UNLOCK + CAP =====
+pcall(function()
+    if setfpscap then
+        setfpscap(CONFIG.FPSCap)
+    end
+end)
+
+--// ===== SAFE LOOP (LOW COST) =====
+task.spawn(function()
+    while true do
+        fullApply()
+        task.wait(5)
+    end
+end)
