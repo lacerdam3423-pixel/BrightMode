@@ -1,9 +1,8 @@
---// ULTRA BRIGHT MODE (EXPOSURE SYSTEM) + ANTILAG
---// FEITO PARA PERFORMANCE ALTA + VISUAL LIMPO
-
+--// SERVICES
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 
@@ -11,36 +10,29 @@ local player = Players.LocalPlayer
 local CONFIG = {
 	ExposureDay = 0.3,
 	ExposureNight = 0.6,
-	MaxFPS = 200,
-	StreamDistance = 1000
+	Brightness = 2,
+	FPSCap = 200,
+	MaxDistance = 100
 }
 
---// FPS UNLOCK (safe)
+--// FPS UNLOCK (Simples)
 pcall(function()
 	if setfpscap then
-		setfpscap(CONFIG.MaxFPS)
+		setfpscap(CONFIG.FPSCap)
 	end
 end)
 
---// STREAMING (não quebra mapa)
-pcall(function()
-	if player then
-		player.MaximumSimulationRadius = CONFIG.StreamDistance
-	end
-end)
-
---// REMOVER LUZES DO MAPA (sem afetar textura)
-local function removeLights(obj)
-	if obj:IsA("PointLight") 
-	or obj:IsA("SpotLight") 
-	or obj:IsA("SurfaceLight") then
-		obj:Destroy()
-	end
-end
-
---// REMOVER EFEITOS VISUAIS
+--// REMOVE LUZES E EFEITOS
 local function cleanEffects()
-	for _, v in pairs(Lighting:GetChildren()) do
+	for _, v in ipairs(Workspace:GetDescendants()) do
+		if v:IsA("PointLight")
+		or v:IsA("SpotLight")
+		or v:IsA("SurfaceLight") then
+			v:Destroy()
+		end
+	end
+	
+	for _, v in ipairs(Lighting:GetChildren()) do
 		if v:IsA("BloomEffect")
 		or v:IsA("SunRaysEffect")
 		or v:IsA("ColorCorrectionEffect")
@@ -51,64 +43,65 @@ local function cleanEffects()
 	end
 end
 
---// REMOVER NEVOA
-local function removeFog()
-	Lighting.FogEnd = 1000000
-	Lighting.FogStart = 0
-	Lighting.FogColor = Color3.fromRGB(255,255,255)
-end
-
---// DESATIVAR SOMBRAS E REFLEXOS PESADOS
-local function optimizeLighting()
+--// BRIGHT MODE (EXPOSURE)
+local function applyExposure()
 	Lighting.GlobalShadows = false
+	Lighting.FogEnd = 1e10
+	Lighting.FogStart = 1e10
+	Lighting.Brightness = CONFIG.Brightness
+
 	Lighting.EnvironmentDiffuseScale = 0
 	Lighting.EnvironmentSpecularScale = 0
-	Lighting.ShadowSoftness = 0
-end
 
---// SISTEMA DE EXPOSURE DINÂMICO
-local function applyExposure()
-	local time = Lighting.ClockTime
-	
-	if time >= 6 and time <= 18 then
+	-- Exposure automático sem travar horário
+	local clock = Lighting.ClockTime
+
+	if clock >= 6 and clock <= 18 then
 		Lighting.ExposureCompensation = CONFIG.ExposureDay
 	else
 		Lighting.ExposureCompensation = CONFIG.ExposureNight
 	end
 end
 
---// ANTI-LAG SEM QUEBRAR TEXTURAS
+--// ANTI LAG (SEM QUEBRAR TEXTURA)
 local function antiLag()
-	for _, v in pairs(workspace:GetDescendants()) do
-		removeLights(v)
+	Workspace.StreamingEnabled = true
+
+	for _, v in ipairs(Workspace:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.CastShadow = false
+		end
 	end
 end
 
---// AUTO REAPLICAR (ANTI RESET DO JOGO)
-local function loopSystem()
-	RunService.RenderStepped:Connect(function()
-		applyExposure()
-	end)
-
-	task.spawn(function()
-		while true do
-			cleanEffects()
-			removeFog()
-			optimizeLighting()
-			antiLag()
-			task.wait(2)
-		end
-	end)
+--// AUTO REAPLICAR
+local function applyAll()
+	cleanEffects()
+	applyExposure()
+	antiLag()
 end
 
---// DETECTAR NOVOS OBJETOS
-workspace.DescendantAdded:Connect(function(obj)
-	removeLights(obj)
+--// LOOP LEVE (OTIMIZADO)
+task.spawn(function()
+	while true do
+		applyExposure()
+		task.wait(1)
+	end
 end)
 
---// EXECUÇÃO INSTANTÂNEA
-cleanEffects()
-removeFog()
-optimizeLighting()
-antiLag()
-loopSystem()
+--// REAPLICA EM MUDANÇAS
+Workspace.DescendantAdded:Connect(function()
+	task.delay(0.5, applyAll)
+end)
+
+Lighting.Changed:Connect(function()
+	task.delay(0.2, applyExposure)
+end)
+
+player.CharacterAdded:Connect(function()
+	task.wait(1)
+	applyAll()
+end)
+
+--// INIT
+applyAll()
