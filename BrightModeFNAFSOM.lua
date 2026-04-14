@@ -1,109 +1,109 @@
---// ULTRA BRIGHT MODE (Exposure Only) + ANTI LAG
---// Feito para performance alta, sem destruir texturas
+--// ULTRA BRIGHT MODE + ANTI LAG (Exposure Based)
+--// Otimizado | Sem travar | Universal | Mobile Friendly
 
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 
--- CONFIG
-local DAY_EXPOSURE = 0.3
-local NIGHT_EXPOSURE = 0.6
+local player = Players.LocalPlayer
 
--- CONTROLE
-local lastApply = 0
-local APPLY_DELAY = 0.5 -- evita lag (não usar loop pesado)
+--// CONFIG
+local CONFIG = {
+	ExposureDay = 0.3,
+	ExposureNight = 0.6,
+	MaxDistance = 1000,
+	FPSCap = 300
+}
 
--- REMOVER EFEITOS
-local function removeEffects()
-	for _, v in ipairs(Lighting:GetChildren()) do
-		if v:IsA("BloomEffect") 
+--// FPS CAP
+pcall(function()
+	setfpscap(CONFIG.FPSCap)
+end)
+
+--// FUNÇÃO: LIMPAR EFEITOS VISUAIS
+local function cleanEffects()
+	for _, v in ipairs(Lighting:GetDescendants()) do
+		if v:IsA("BloomEffect")
 		or v:IsA("SunRaysEffect")
 		or v:IsA("ColorCorrectionEffect")
-		or v:IsA("BlurEffect")
-		or v:IsA("DepthOfFieldEffect") then
+		or v:IsA("DepthOfFieldEffect")
+		or v:IsA("BlurEffect") then
 			v:Destroy()
 		end
 	end
 end
 
--- REMOVER LUZES DO MAPA
+--// FUNÇÃO: REMOVER LUZES DO MAPA
 local function removeLights()
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if obj:IsA("PointLight") 
-		or obj:IsA("SpotLight") 
-		or obj:IsA("SurfaceLight") then
-			obj:Destroy()
+	for _, v in ipairs(Workspace:GetDescendants()) do
+		if v:IsA("PointLight")
+		or v:IsA("SpotLight")
+		or v:IsA("SurfaceLight") then
+			v.Enabled = false
 		end
 	end
 end
 
--- REMOVER FOG
-local function removeFog()
-	Lighting.FogEnd = 1e10
-	Lighting.FogStart = 1e10
-	Lighting.FogColor = Color3.fromRGB(255,255,255)
-end
-
--- CONFIGURAÇÃO PRINCIPAL
-local function applyBright()
-	-- SEM SOMBRAS
+--// FUNÇÃO: ANTI-LAG (SEM MEXER TEXTURAS)
+local function optimize()
 	Lighting.GlobalShadows = false
-	
-	-- TECNOLOGIA MAIS LEVE
-	Lighting.Technology = Enum.Technology.Compatibility
-	
-	-- EXPOSURE DINÂMICO
-	if Lighting.ClockTime >= 6 and Lighting.ClockTime <= 18 then
-		Lighting.ExposureCompensation = DAY_EXPOSURE
-	else
-		Lighting.ExposureCompensation = NIGHT_EXPOSURE
-	end
-	
-	-- COR NEUTRA
-	Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255)
-	Lighting.Ambient = Color3.fromRGB(255,255,255)
-	
-	-- SEM REFLEXOS PESADOS
+	Lighting.FogEnd = 1e10 -- fog invisível (não remove)
+	Lighting.FogStart = 0
+
 	Lighting.EnvironmentDiffuseScale = 0
 	Lighting.EnvironmentSpecularScale = 0
-	
-	-- REMOVE FOG
-	removeFog()
-	
-	-- REMOVE EFEITOS
-	removeEffects()
+
+	Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255)
+	Lighting.Ambient = Color3.fromRGB(255,255,255)
+
+	Lighting.Technology = Enum.Technology.Compatibility
 end
 
--- AUTO REAPLICAR (SEM LAG)
-RunService.RenderStepped:Connect(function()
-	if tick() - lastApply > APPLY_DELAY then
-		lastApply = tick()
-		
-		applyBright()
-	end
-end)
+--// FUNÇÃO: EXPOSURE DINÂMICO
+local function applyExposure()
+	local brightness = Lighting.Brightness
 
--- REMOVER LUZES UMA VEZ (evita lag)
-task.spawn(function()
+	if brightness > 2 then
+		Lighting.ExposureCompensation = CONFIG.ExposureDay
+	else
+		Lighting.ExposureCompensation = CONFIG.ExposureNight
+	end
+end
+
+--// FUNÇÃO: FULL BRIGHT LIMPO
+local function applyBright()
+	Lighting.Brightness = 2
+	Lighting.ClockTime = Lighting.ClockTime -- não fixa
+
+	Lighting.ColorShift_Top = Color3.new(0,0,0)
+	Lighting.ColorShift_Bottom = Color3.new(0,0,0)
+end
+
+--// FUNÇÃO: RENDER DISTANCE
+local function renderBoost()
+	pcall(function()
+		Workspace.StreamingEnabled = true
+		Workspace.StreamingTargetRadius = CONFIG.MaxDistance
+	end)
+end
+
+--// AUTO REAPLICAR (ANTI RESET)
+local function autoFix()
+	cleanEffects()
 	removeLights()
+	optimize()
+	applyBright()
+	applyExposure()
+	renderBoost()
+end
+
+--// LOOP PRINCIPAL (ULTRA LEVE)
+RunService.RenderStepped:Connect(function()
+	autoFix()
 end)
 
--- REAPLICAR SE ALGO FOR ADICIONADO
-Lighting.ChildAdded:Connect(function()
-	task.wait(0.2)
-	removeEffects()
-end)
+--// EXECUÇÃO INSTANTÂNEA
+autoFix()
 
-workspace.DescendantAdded:Connect(function(obj)
-	if obj:IsA("PointLight") 
-	or obj:IsA("SpotLight") 
-	or obj:IsA("SurfaceLight") then
-		obj:Destroy()
-	end
-end)
-
--- FPS CAP (200)
-pcall(function()
-	setfpscap(200)
-end)
-
-print("✔ Ultra Bright Mode Ativado (Exposure System)")
+print("✅ Ultra Bright Mode + AntiLag Ativado")
