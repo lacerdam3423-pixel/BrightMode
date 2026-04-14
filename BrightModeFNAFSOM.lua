@@ -1,112 +1,115 @@
+--// ULTRA BRIGHT MODE + ANTILAG (Exposure Only)
+--// Coloque em StarterPlayerScripts
+
 local Lighting = game:GetService("Lighting")
-local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-
 local player = Players.LocalPlayer
 
--- CONFIG
+--// CONFIG
 local TARGET_FPS = 200
 local RENDER_DISTANCE = 1000
 
--- BRIGHT MODE VIA EXPOSURE
-local function applyBrightMode()
-    Lighting.GlobalShadows = false
-    Lighting.FogEnd = 9999999
-    Lighting.FogStart = 0
-    Lighting.FogColor = Color3.new(1,1,1)
+--// FUNÇÃO: LIMPAR EFEITOS
+local function cleanEffects()
+	for _, v in pairs(Lighting:GetChildren()) do
+		if v:IsA("PostEffect") then
+			v:Destroy()
+		end
+	end
 
-    Lighting.Brightness = 1
-    Lighting.EnvironmentDiffuseScale = 0
-    Lighting.EnvironmentSpecularScale = 0
+	-- Remover neblina
+	Lighting.FogEnd = 9999999
+	Lighting.FogStart = 0
+	Lighting.FogColor = Color3.new(1,1,1)
 
-    -- Exposure (principal)
-    Lighting.ExposureCompensation = 0.6 -- equilibrado (não cega)
+	-- Remover sombras e suavização
+	Lighting.GlobalShadows = false
+	Lighting.Technology = Enum.Technology.Compatibility
+	Lighting.EnvironmentDiffuseScale = 0
+	Lighting.EnvironmentSpecularScale = 0
+	Lighting.ShadowSoftness = 0
 end
 
--- REMOVE EFEITOS PESADOS
-local function removeEffects()
-    for _, v in pairs(Lighting:GetChildren()) do
-        if v:IsA("BloomEffect")
-        or v:IsA("BlurEffect")
-        or v:IsA("ColorCorrectionEffect")
-        or v:IsA("SunRaysEffect")
-        or v:IsA("DepthOfFieldEffect") then
-            v:Destroy()
-        end
-    end
-end
-
--- REMOVE LUZES DO MAPA
+--// FUNÇÃO: REMOVER LUZES PESADAS
 local function removeLights()
-    for _, v in pairs(Workspace:GetDescendants()) do
-        if v:IsA("PointLight")
-        or v:IsA("SpotLight")
-        or v:IsA("SurfaceLight") then
-            v:Destroy()
-        end
-    end
+	for _, v in pairs(Workspace:GetDescendants()) do
+		if v:IsA("PointLight") 
+		or v:IsA("SpotLight") 
+		or v:IsA("SurfaceLight") then
+			v:Destroy()
+		end
+	end
 end
 
--- ANTI LAG SEM QUEBRAR TEXTURA
-local function optimize()
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+--// FUNÇÃO: BRIGHT MODE (EXPOSURE BASED)
+local function applyExposure()
+	Lighting.ClockTime = Lighting.ClockTime -- não fixa o tempo
+	
+	-- Exposure natural (sem cegar)
+	Lighting.ExposureCompensation = 0.35
+	
+	-- Ajuste dinâmico dia/noite
+	local function updateExposure()
+		local time = Lighting.ClockTime
+		
+		if time >= 6 and time <= 18 then
+			-- Dia
+			Lighting.ExposureCompensation = 0.23
+		else
+			-- Noite (mais visível)
+			Lighting.ExposureCompensation = 0.6
+		end
+	end
+	
+	updateExposure()
+	
+	-- Atualizar automaticamente
+	task.spawn(function()
+		while true do
+			updateExposure()
+			task.wait(2)
+		end
+	end)
 end
 
--- CARREGAMENTO DE MAPA (SIMULA 1000 STUDS)
-local function preloadMap()
-    local char = player.Character or player.CharacterAdded:Wait()
-    local root = char:WaitForChild("HumanoidRootPart")
-
-    for _, v in pairs(Workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            if (v.Position - root.Position).Magnitude < RENDER_DISTANCE then
-                v.LocalTransparencyModifier = v.LocalTransparencyModifier
-            end
-        end
-    end
+--// FUNÇÃO: ANTI-LAG SEM QUEBRAR TEXTURAS
+local function optimizeWorld()
+	Workspace.StreamingEnabled = true
+	Workspace.StreamingTargetRadius = RENDER_DISTANCE
+	
+	-- Não mexe nas texturas (mantém qualidade)
+	settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
 end
 
--- DESBLOQUEIO DE FPS (loop estável)
-local function fpsUnlock()
-    local frameTime = 1 / TARGET_FPS
-    while true do
-        local start = tick()
-
-        RunService.RenderStepped:Wait()
-
-        local elapsed = tick() - start
-        if elapsed < frameTime then
-            task.wait(frameTime - elapsed)
-        end
-    end
-end
-
--- AUTO REAPLICAR (ANTI RESET)
+--// FUNÇÃO: REAPLICAR (ANTI RESET)
 local function autoReapply()
-    RunService.RenderStepped:Connect(function()
-        applyBrightMode()
-    end)
-
-    Lighting.ChildAdded:Connect(function()
-        removeEffects()
-    end)
-
-    Workspace.DescendantAdded:Connect(function(v)
-        if v:IsA("PointLight")
-        or v:IsA("SpotLight")
-        or v:IsA("SurfaceLight") then
-            v:Destroy()
-        end
-    end)
+	Lighting.ChildAdded:Connect(function()
+		task.wait()
+		cleanEffects()
+	end)
 end
 
--- EXECUÇÃO INSTANTÂNEA
-applyBrightMode()
-removeEffects()
+--// FPS BOOST (limitador leve)
+local RunService = game:GetService("RunService")
+local last = tick()
+
+RunService.RenderStepped:Connect(function()
+	local now = tick()
+	local delta = now - last
+	
+	if delta < (1 / TARGET_FPS) then
+		task.wait((1 / TARGET_FPS) - delta)
+	end
+	
+	last = tick()
+end)
+
+--// EXECUÇÃO INSTANTÂNEA
+cleanEffects()
 removeLights()
-optimize()
-preloadMap()
+applyExposure()
+optimizeWorld()
 autoReapply()
 
-task.spawn(fpsUnlock)
+print("✔ Bright Mode Ultra + AntiLag Ativado")
