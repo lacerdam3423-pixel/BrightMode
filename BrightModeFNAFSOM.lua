@@ -1,98 +1,112 @@
---// ULTRA BRIGHT MODE + ANTILAG (EXPOSURE SYSTEM)
---// Coloque em StarterPlayerScripts
-
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
 
--- Config principal
-local CONFIG = {
-	DayExposure = 0.35,
-	NightExposure = 1.2,
-	SmoothSpeed = 0.05
-}
+local player = Players.LocalPlayer
 
--- Remove efeitos pesados
-local function cleanEffects()
-	for _, v in pairs(Lighting:GetChildren()) do
-		if v:IsA("PostEffect") then
-			v:Destroy()
-		end
-	end
+-- CONFIG
+local TARGET_FPS = 200
+local RENDER_DISTANCE = 1000
+
+-- BRIGHT MODE VIA EXPOSURE
+local function applyBrightMode()
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9999999
+    Lighting.FogStart = 0
+    Lighting.FogColor = Color3.new(1,1,1)
+
+    Lighting.Brightness = 1
+    Lighting.EnvironmentDiffuseScale = 0
+    Lighting.EnvironmentSpecularScale = 0
+
+    -- Exposure (principal)
+    Lighting.ExposureCompensation = 0.6 -- equilibrado (não cega)
 end
 
--- Remove nevoa
-local function removeFog()
-	Lighting.FogEnd = 9999999
-	Lighting.FogStart = 0
-	Lighting.FogColor = Color3.new(1,1,1)
+-- REMOVE EFEITOS PESADOS
+local function removeEffects()
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("BloomEffect")
+        or v:IsA("BlurEffect")
+        or v:IsA("ColorCorrectionEffect")
+        or v:IsA("SunRaysEffect")
+        or v:IsA("DepthOfFieldEffect") then
+            v:Destroy()
+        end
+    end
 end
 
--- Remove luzes do mapa (sem afetar textura)
+-- REMOVE LUZES DO MAPA
 local function removeLights()
-	for _, obj in ipairs(Workspace:GetDescendants()) do
-		if obj:IsA("PointLight") 
-		or obj:IsA("SpotLight") 
-		or obj:IsA("SurfaceLight") then
-			obj.Enabled = false
-		end
-	end
+    for _, v in pairs(Workspace:GetDescendants()) do
+        if v:IsA("PointLight")
+        or v:IsA("SpotLight")
+        or v:IsA("SurfaceLight") then
+            v:Destroy()
+        end
+    end
 end
 
--- Config iluminação leve
-local function optimizeLighting()
-	Lighting.GlobalShadows = false
-	Lighting.Brightness = 1
-	Lighting.EnvironmentDiffuseScale = 0
-	Lighting.EnvironmentSpecularScale = 0
-	Lighting.OutdoorAmbient = Color3.fromRGB(150,150,150)
-	Lighting.Ambient = Color3.fromRGB(120,120,120)
+-- ANTI LAG SEM QUEBRAR TEXTURA
+local function optimize()
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
 end
 
--- Sistema de exposição dinâmica (sem fixar hora)
-local currentExposure = 0
+-- CARREGAMENTO DE MAPA (SIMULA 1000 STUDS)
+local function preloadMap()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local root = char:WaitForChild("HumanoidRootPart")
 
-local function updateExposure()
-	local clock = Lighting.ClockTime
-	
-	-- Dia = 6 até 18
-	local target = (clock >= 6 and clock <= 18) and CONFIG.DayExposure or CONFIG.NightExposure
-	
-	-- Suavização (não cega os olhos)
-	currentExposure = currentExposure + (target - currentExposure) * CONFIG.SmoothSpeed
-	
-	Lighting.ExposureCompensation = currentExposure
+    for _, v in pairs(Workspace:GetDescendants()) do
+        if v:IsA("BasePart") then
+            if (v.Position - root.Position).Magnitude < RENDER_DISTANCE then
+                v.LocalTransparencyModifier = v.LocalTransparencyModifier
+            end
+        end
+    end
 end
 
--- Auto reaplicar (anti reset)
-local function autoApply()
-	cleanEffects()
-	removeFog()
-	optimizeLighting()
-	removeLights()
+-- DESBLOQUEIO DE FPS (loop estável)
+local function fpsUnlock()
+    local frameTime = 1 / TARGET_FPS
+    while true do
+        local start = tick()
+
+        RunService.RenderStepped:Wait()
+
+        local elapsed = tick() - start
+        if elapsed < frameTime then
+            task.wait(frameTime - elapsed)
+        end
+    end
 end
 
--- Detecta novas luzes (mapa carregando / streaming)
-Workspace.DescendantAdded:Connect(function(obj)
-	if obj:IsA("PointLight") 
-	or obj:IsA("SpotLight") 
-	or obj:IsA("SurfaceLight") then
-		obj.Enabled = false
-	end
-end)
+-- AUTO REAPLICAR (ANTI RESET)
+local function autoReapply()
+    RunService.RenderStepped:Connect(function()
+        applyBrightMode()
+    end)
 
--- Loop principal ultra leve
-RunService.RenderStepped:Connect(function()
-	updateExposure()
-end)
+    Lighting.ChildAdded:Connect(function()
+        removeEffects()
+    end)
 
--- Reaplicação automática leve
-task.spawn(function()
-	while true do
-		autoApply()
-		task.wait(5)
-	end
-end)
+    Workspace.DescendantAdded:Connect(function(v)
+        if v:IsA("PointLight")
+        or v:IsA("SpotLight")
+        or v:IsA("SurfaceLight") then
+            v:Destroy()
+        end
+    end)
+end
 
--- Inicialização instantânea
-autoApply()
+-- EXECUÇÃO INSTANTÂNEA
+applyBrightMode()
+removeEffects()
+removeLights()
+optimize()
+preloadMap()
+autoReapply()
+
+task.spawn(fpsUnlock)
