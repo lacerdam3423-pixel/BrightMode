@@ -10,7 +10,7 @@ local player = Players.LocalPlayer
 local CONFIG = {
     ExposureDay = 0.2,
     ExposureNight = 0.55,
-    Brightness = 0.2,
+    Brightness = 0.0,
     MaxDistance = 1000,
     FPSCap = 200
 }
