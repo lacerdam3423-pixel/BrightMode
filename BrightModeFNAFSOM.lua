@@ -64,7 +64,7 @@ end
 local function applyExposure()
 	local brightness = Lighting.Brightness
 
-	if brightness > 2 then
+	if brightness > 0.5 then
 		Lighting.ExposureCompensation = CONFIG.ExposureDay
 	else
 		Lighting.ExposureCompensation = CONFIG.ExposureNight
@@ -73,7 +73,7 @@ end
 
 --// FUNÇÃO: FULL BRIGHT LIMPO
 local function applyBright()
-	Lighting.Brightness = 2
+	Lighting.Brightness = 0.5
 	Lighting.ClockTime = Lighting.ClockTime -- não fixa
 
 	Lighting.ColorShift_Top = Color3.new(0,0,0)
