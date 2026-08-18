@@ -14,7 +14,7 @@ local PlayerGui: PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 -- ==================== CONFIGURATION ====================
 local CONFIG = {
 	ExposureDay = 0.3,
-	ExposureNight = 0.6,
+	ExposureNight = 0.9,
 	FPSCap = 200,
 	RenderDistance = 1000,
 	AntiLagInterval = 0.2,
@@ -45,9 +45,9 @@ end)
 
 local function setLightingBase(): ()
 	Lighting.GlobalShadows = false
-	Lighting.Brightness = 0
-	Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-	Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+	Lighting.Brightness = 0.3
+	Lighting.Ambient = Color3.fromRGB(200,200,200)
+	Lighting.OutdoorAmbient = Color3.fromRGB(100,100,100)
 	Lighting.ColorShift_Top = Color3.new(0, 0, 0)
 	Lighting.ColorShift_Bottom = Color3.new(0, 0, 0)
 	Lighting.EnvironmentDiffuseScale = 0
