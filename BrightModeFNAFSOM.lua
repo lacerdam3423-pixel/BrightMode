@@ -66,7 +66,7 @@ end
 
 local function setNoFog(): ()
 	Lighting.FogStart = 0
-	Lighting.FogEnd = 1e10
+	Lighting.FogEnd = math.huge
 
 	local atmosphere: Atmosphere? = Lighting:FindFirstChildOfClass("Atmosphere")
 	if atmosphere then
