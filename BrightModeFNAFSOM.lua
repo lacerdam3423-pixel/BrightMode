@@ -1,37 +1,39 @@
---!strict
 --// FULL BRIGHT + NOFOG + ANTI LAG + CHAT COMMANDS + CUSTOM GUI
---// LocalScript | Organized | Auto Reapply
+--// LocalScript | Funcional | Com Confirmação
 
-local Lighting: Lighting = game:GetService("Lighting")
-local Workspace: Workspace = game:GetService("Workspace")
-local RunService: RunService = game:GetService("RunService")
-local Players: Players = game:GetService("Players")
-local TextChatService: TextChatService = game:GetService("TextChatService")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local TextChatService = game:GetService("TextChatService")
 
-local LocalPlayer: Player = Players.LocalPlayer
-local PlayerGui: PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- ==================== CONFIGURATION ====================
+print("✅ Script carregado com sucesso!")
+
+-- ==================== CONFIGURAÇÃO ====================
 local CONFIG = {
 	ExposureDay = 0.3,
-	ExposureNight = 0.9,
+	ExposureNight = 0.6,
 	FPSCap = 200,
 	RenderDistance = 1000,
 	AntiLagInterval = 0.2,
 }
 
-local DEFAULT_LIGHTING: {[string]: any} = {}
-local isSystemEnabled: boolean = true
-local antiLagConnection: thread? = nil
--- ==================== END CONFIGURATION ====================
+local DEFAULT_LIGHTING = {}
+local isSystemEnabled = true
+local antiLagRunning = false
+-- ==================== FIM CONFIG ====================
 
-for _, prop: string in ipairs({
+-- Salvar valores padrão
+for _, prop in ipairs({
 	"GlobalShadows", "Brightness", "Ambient", "OutdoorAmbient",
 	"ColorShift_Top", "ColorShift_Bottom", "EnvironmentDiffuseScale",
 	"EnvironmentSpecularScale", "Technology", "FogStart", "FogEnd",
-	"ExposureCompensation", "ReflectionIntensity", "ShadowSoftness"
+	"ExposureCompensation"
 }) do
-	local success: boolean, val: any = pcall(function(): any
+	local success, val = pcall(function()
 		return Lighting[prop]
 	end)
 	if success then
@@ -39,82 +41,84 @@ for _, prop: string in ipairs({
 	end
 end
 
-pcall(function(): ()
-	setfpscap(CONFIG.FPSCap)
+-- FPS Cap
+pcall(function()
+	if setfpscap then
+		setfpscap(CONFIG.FPSCap)
+		print("✅ FPS Cap definido para: " .. CONFIG.FPSCap)
+	end
 end)
 
-local function setLightingBase(): ()
-	Lighting.GlobalShadows = false
-	Lighting.Brightness = 0.3
-	Lighting.Ambient = Color3.fromRGB(200,200,200)
-	Lighting.OutdoorAmbient = Color3.fromRGB(100,100,100)
-	Lighting.ColorShift_Top = Color3.new(0, 0, 0)
-	Lighting.ColorShift_Bottom = Color3.new(0, 0, 0)
-	Lighting.EnvironmentDiffuseScale = 0
-	Lighting.EnvironmentSpecularScale = 0
-	Lighting.Technology = Enum.Technology.Compatibility
+local function setLightingBase()
+	pcall(function() Lighting.GlobalShadows = false end)
+	pcall(function() Lighting.Brightness = 0 end)
+	pcall(function() Lighting.Ambient = Color3.fromRGB(200, 200, 200) end)
+	pcall(function() Lighting.OutdoorAmbient = Color3.fromRGB(100, 100, 100) end)
+	pcall(function() Lighting.ColorShift_Top = Color3.new(0, 0, 0) end)
+	pcall(function() Lighting.ColorShift_Bottom = Color3.new(0, 0, 0) end)
+	pcall(function() Lighting.EnvironmentDiffuseScale = 0 end)
+	pcall(function() Lighting.EnvironmentSpecularScale = 0 end)
+	pcall(function() Lighting.Technology = Enum.Technology.Unified end)
 end
 
-local function setExposure(): ()
-	local clock: number = Lighting.ClockTime
+local function setExposure()
+	local clock = Lighting.ClockTime
 	if clock >= 6 and clock < 18 then
-		Lighting.ExposureCompensation = CONFIG.ExposureDay
+		pcall(function() Lighting.ExposureCompensation = CONFIG.ExposureDay end)
 	else
-		Lighting.ExposureCompensation = CONFIG.ExposureNight
+		pcall(function() Lighting.ExposureCompensation = CONFIG.ExposureNight end)
 	end
 end
 
-local function setNoFog(): ()
-	Lighting.FogStart = 0
-	Lighting.FogEnd = math.huge
+local function setNoFog()
+	pcall(function() Lighting.FogStart = 0 end)
+	pcall(function() Lighting.FogEnd = math.huge end)
 
-	local atmosphere: Atmosphere? = Lighting:FindFirstChildOfClass("Atmosphere")
+	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
 	if atmosphere then
-		atmosphere.Density = 0
-		atmosphere.Offset = 0
-		atmosphere.Glare = 0
-		atmosphere.Haze = 0
+		pcall(function() atmosphere.Density = 0 end)
+		pcall(function() atmosphere.Offset = 0 end)
+		pcall(function() atmosphere.Glare = 0 end)
+		pcall(function() atmosphere.Haze = 0 end)
 	end
 end
 
-local function removePostEffects(): ()
-	for _, obj: Instance in ipairs(Lighting:GetDescendants()) do
+local function removePostEffects()
+	for _, obj in ipairs(Lighting:GetDescendants()) do
 		if obj:IsA("BloomEffect")
 			or obj:IsA("BlurEffect")
 			or obj:IsA("SunRaysEffect")
 			or obj:IsA("ColorCorrectionEffect")
 			or obj:IsA("DepthOfFieldEffect") then
-			obj:Destroy()
+			pcall(function() obj:Destroy() end)
 		end
 	end
 end
 
-local function disableWorldLights(): ()
-	for _, obj: Instance in ipairs(Workspace:GetDescendants()) do
+local function disableWorldLights()
+	for _, obj in ipairs(Workspace:GetDescendants()) do
 		if obj:IsA("PointLight")
 			or obj:IsA("SpotLight")
 			or obj:IsA("SurfaceLight") then
-			obj.Enabled = false
+			pcall(function() obj.Enabled = false end)
 		end
 	end
 end
 
-local function removeReflections(): ()
-	pcall(function(): ()
-		Lighting.ReflectionIntensity = 0
-		Lighting.ShadowSoftness = 0
-	end)
+local function removeReflections()
+	pcall(function() Lighting.ReflectionIntensity = 0 end)
+	pcall(function() Lighting.ShadowSoftness = 0 end)
 end
 
-local function boostStreaming(): ()
-	pcall(function(): ()
+local function boostStreaming()
+	pcall(function()
 		Workspace.StreamingEnabled = true
 		Workspace.StreamingTargetRadius = CONFIG.RenderDistance
 		Workspace.StreamingMinRadius = math.min(128, CONFIG.RenderDistance)
 	end)
 end
 
-local function antiLag(): ()
+local function antiLag()
 	setLightingBase()
 	setExposure()
 	setNoFog()
@@ -124,80 +128,92 @@ local function antiLag(): ()
 	boostStreaming()
 end
 
-local function restoreDefaults(): ()
-	for property: string, value: any in pairs(DEFAULT_LIGHTING) do
-		pcall(function(): ()
-			Lighting[property] = value
-		end)
+local function restoreDefaults()
+	for property, value in pairs(DEFAULT_LIGHTING) do
+		pcall(function() Lighting[property] = value end)
 	end
 
-	local atmosphere: Atmosphere? = Lighting:FindFirstChildOfClass("Atmosphere")
+	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
 	if atmosphere then
-		atmosphere.Density = 0
-		atmosphere.Offset = 0
-		atmosphere.Glare = 0
-		atmosphere.Haze = 0
+		pcall(function() atmosphere.Density = 0.415 end)
+		pcall(function() atmosphere.Offset = 0.225 end)
+		pcall(function() atmosphere.Glare = 0 end)
+		pcall(function() atmosphere.Haze = 0 end)
 	end
 end
 
-local function enableSystem(): ()
+local function sendSystemMessage(text)
+	pcall(function()
+		game.StarterGui:SetCore("ChatMakeSystemMessage", {
+			Text = "[SYSTEM] " .. text,
+			Color = Color3.fromRGB(0, 255, 128),
+			Font = Enum.Font.SourceSansBold,
+			TextSize = 18,
+		})
+	end)
+	print("📢 " .. text)
+end
+
+local function enableSystem()
 	isSystemEnabled = true
 	antiLag()
+	sendSystemMessage("✅ Sistema ATIVADO - Full Bright + No Fog + Anti Lag")
 
-	if not antiLagConnection then
-		antiLagConnection = task.spawn(function(): ()
-			while isSystemEnabled do
+	if not antiLagRunning then
+		antiLagRunning = true
+		task.spawn(function()
+			while antiLagRunning and isSystemEnabled do
 				task.wait(CONFIG.AntiLagInterval)
 				if isSystemEnabled then
 					antiLag()
 				end
 			end
+			antiLagRunning = false
 		end)
 	end
 end
 
-local function disableSystem(): ()
+local function disableSystem()
 	isSystemEnabled = false
-
-	if antiLagConnection then
-		task.cancel(antiLagConnection)
-		antiLagConnection = nil
-	end
-
+	antiLagRunning = false
 	restoreDefaults()
+	sendSystemMessage("❌ Sistema DESATIVADO - Valores restaurados")
 end
 
--- ==================== CUSTOM CHAT GUI ====================
-local function createChatGui(): ()
-	local existingGui: ScreenGui? = PlayerGui:FindFirstChild("CustomChatGui") :: ScreenGui?
+-- ==================== GUI DE CHAT ====================
+local function createChatGui()
+	local existingGui = PlayerGui:FindFirstChild("CustomChatGui")
 	if existingGui then
 		existingGui.Enabled = not existingGui.Enabled
+		sendSystemMessage("💬 Chat GUI: " .. (existingGui.Enabled and "ABERTO" or "FECHADO"))
 		return
 	end
 
-	local ScreenGui: ScreenGui = Instance.new("ScreenGui")
+	sendSystemMessage("💬 Criando GUI de Chat Custom...")
+
+	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name = "CustomChatGui"
 	ScreenGui.ResetOnSpawn = false
 	ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	ScreenGui.Parent = PlayerGui
 
-	local MainFrame: Frame = Instance.new("Frame")
+	local MainFrame = Instance.new("Frame")
 	MainFrame.Name = "MainFrame"
 	MainFrame.Size = UDim2.new(0, 400, 0, 500)
 	MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
 	MainFrame.BackgroundColor3 = Color3.fromRGB(128, 128, 128)
 	MainFrame.Parent = ScreenGui
 
-	local UICorner: UICorner = Instance.new("UICorner")
+	local UICorner = Instance.new("UICorner")
 	UICorner.CornerRadius = UDim.new(0, 12)
 	UICorner.Parent = MainFrame
 
-	local UIStroke: UIStroke = Instance.new("UIStroke")
+	local UIStroke = Instance.new("UIStroke")
 	UIStroke.Color = Color3.fromRGB(0, 0, 0)
 	UIStroke.Thickness = 2
 	UIStroke.Parent = MainFrame
 
-	local CloseButton: TextButton = Instance.new("TextButton")
+	local CloseButton = Instance.new("TextButton")
 	CloseButton.Name = "CloseButton"
 	CloseButton.Size = UDim2.new(0, 30, 0, 30)
 	CloseButton.Position = UDim2.new(1, -35, 0, 5)
@@ -208,11 +224,11 @@ local function createChatGui(): ()
 	CloseButton.Font = Enum.Font.GothamBold
 	CloseButton.Parent = MainFrame
 
-	local CloseCorner: UICorner = Instance.new("UICorner")
+	local CloseCorner = Instance.new("UICorner")
 	CloseCorner.CornerRadius = UDim.new(0, 6)
 	CloseCorner.Parent = CloseButton
 
-	local TitleLabel: TextLabel = Instance.new("TextLabel")
+	local TitleLabel = Instance.new("TextLabel")
 	TitleLabel.Name = "TitleLabel"
 	TitleLabel.Size = UDim2.new(1, -40, 0, 35)
 	TitleLabel.Position = UDim2.new(0, 10, 0, 5)
@@ -223,7 +239,7 @@ local function createChatGui(): ()
 	TitleLabel.Font = Enum.Font.GothamBold
 	TitleLabel.Parent = MainFrame
 
-	local ScrollFrame: ScrollingFrame = Instance.new("ScrollFrame")
+	local ScrollFrame = Instance.new("ScrollingFrame")
 	ScrollFrame.Name = "ScrollFrame"
 	ScrollFrame.Size = UDim2.new(1, -20, 0, 380)
 	ScrollFrame.Position = UDim2.new(0, 10, 0, 45)
@@ -233,16 +249,16 @@ local function createChatGui(): ()
 	ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 	ScrollFrame.Parent = MainFrame
 
-	local ScrollCorner: UICorner = Instance.new("UICorner")
+	local ScrollCorner = Instance.new("UICorner")
 	ScrollCorner.CornerRadius = UDim.new(0, 8)
 	ScrollCorner.Parent = ScrollFrame
 
-	local UIListLayout: UIListLayout = Instance.new("UIListLayout")
+	local UIListLayout = Instance.new("UIListLayout")
 	UIListLayout.Padding = UDim.new(0, 2)
 	UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	UIListLayout.Parent = ScrollFrame
 
-	local ChatBox: TextBox = Instance.new("TextBox")
+	local ChatBox = Instance.new("TextBox")
 	ChatBox.Name = "ChatBox"
 	ChatBox.Size = UDim2.new(1, -90, 0, 40)
 	ChatBox.Position = UDim2.new(0, 10, 1, -50)
@@ -256,11 +272,11 @@ local function createChatGui(): ()
 	ChatBox.ClearTextOnFocus = false
 	ChatBox.Parent = MainFrame
 
-	local ChatCorner: UICorner = Instance.new("UICorner")
+	local ChatCorner = Instance.new("UICorner")
 	ChatCorner.CornerRadius = UDim.new(0, 8)
 	ChatCorner.Parent = ChatBox
 
-	local SendButton: TextButton = Instance.new("TextButton")
+	local SendButton = Instance.new("TextButton")
 	SendButton.Name = "SendButton"
 	SendButton.Size = UDim2.new(0, 70, 0, 40)
 	SendButton.Position = UDim2.new(1, -80, 1, -50)
@@ -271,12 +287,12 @@ local function createChatGui(): ()
 	SendButton.Font = Enum.Font.GothamBold
 	SendButton.Parent = MainFrame
 
-	local SendCorner: UICorner = Instance.new("UICorner")
+	local SendCorner = Instance.new("UICorner")
 	SendCorner.CornerRadius = UDim.new(0, 8)
 	SendCorner.Parent = SendButton
 
-	local function addMessageToGui(text: string, sender: string): ()
-		local MessageLabel: TextLabel = Instance.new("TextLabel")
+	local function addMessageToGui(text, sender)
+		local MessageLabel = Instance.new("TextLabel")
 		MessageLabel.Name = "Message_" .. tostring(os.time())
 		MessageLabel.Size = UDim2.new(1, -10, 0, 0)
 		MessageLabel.AutomaticSize = Enum.AutomaticSize.Y
@@ -289,11 +305,11 @@ local function createChatGui(): ()
 		MessageLabel.Font = Enum.Font.Gotham
 		MessageLabel.Parent = ScrollFrame
 
-		local MsgCorner: UICorner = Instance.new("UICorner")
+		local MsgCorner = Instance.new("UICorner")
 		MsgCorner.CornerRadius = UDim.new(0, 4)
 		MsgCorner.Parent = MessageLabel
 
-		local MsgPadding: UIPadding = Instance.new("UIPadding")
+		local MsgPadding = Instance.new("UIPadding")
 		MsgPadding.PaddingLeft = UDim.new(0, 5)
 		MsgPadding.PaddingRight = UDim.new(0, 5)
 		MsgPadding.PaddingTop = UDim.new(0, 3)
@@ -305,21 +321,17 @@ local function createChatGui(): ()
 		ScrollFrame.CanvasPosition = Vector2.new(0, UIListLayout.AbsoluteContentSize.Y)
 	end
 
-	local function sendMessage(): ()
-		local text: string = string.sub(ChatBox.Text, 1, 200)
+	local function sendMessage()
+		local text = string.sub(ChatBox.Text, 1, 200)
 		if string.len(text) == 0 then return end
 
 		addMessageToGui(text, LocalPlayer.Name)
 
-		local generalChannel: TextChannel? = TextChatService:FindFirstChild("General") :: TextChannel?
+		local generalChannel = TextChatService:FindFirstChild("General")
 		if generalChannel then
-			pcall(function(): ()
-				generalChannel:SendAsync(text)
-			end)
+			pcall(function() generalChannel:SendAsync(text) end)
 		else
-			pcall(function(): ()
-				LocalPlayer:Chat(text)
-			end)
+			pcall(function() LocalPlayer:Chat(text) end)
 		end
 
 		ChatBox.Text = ""
@@ -327,23 +339,25 @@ local function createChatGui(): ()
 
 	SendButton.MouseButton1Click:Connect(sendMessage)
 
-	ChatBox.FocusLost:Connect(function(enterPressed: boolean): ()
+	ChatBox.FocusLost:Connect(function(enterPressed)
 		if enterPressed then
 			sendMessage()
 		end
 	end)
 
-	CloseButton.MouseButton1Click:Connect(function(): ()
+	CloseButton.MouseButton1Click:Connect(function()
 		ScreenGui.Enabled = false
 	end)
 
 	addMessageToGui("Bem-vindo ao Chat Custom!", "Sistema")
+	sendSystemMessage("✅ GUI de Chat criada com sucesso!")
 end
--- ==================== END CHAT GUI ====================
+-- ==================== FIM GUI ====================
 
--- ==================== CHAT COMMANDS ====================
-local function onPlayerChat(message: string): ()
-	local lowerMessage: string = string.lower(message)
+-- ==================== COMANDOS DE CHAT ====================
+local function onPlayerChat(message)
+	local lowerMessage = string.lower(message)
+	print("⌨️ Comando recebido: " .. message)
 
 	if lowerMessage == "/e disable" then
 		disableSystem()
@@ -354,10 +368,10 @@ local function onPlayerChat(message: string): ()
 	end
 end
 
-pcall(function(): ()
-	local generalChannel: TextChannel = TextChatService:WaitForChild("General", 5) :: TextChannel
+pcall(function()
+	local generalChannel = TextChatService:WaitForChild("General", 5)
 	if generalChannel then
-		generalChannel.MessageReceived:Connect(function(msg: TextChatMessage): ()
+		generalChannel.MessageReceived:Connect(function(msg)
 			if msg.TextSource and msg.TextSource.Player == LocalPlayer then
 				onPlayerChat(msg.Text)
 			end
@@ -365,20 +379,20 @@ pcall(function(): ()
 	end
 end)
 
-LocalPlayer.Chatted:Connect(function(message: string): ()
+LocalPlayer.Chatted:Connect(function(message)
 	onPlayerChat(message)
 end)
--- ==================== END COMMANDS ====================
+-- ==================== FIM COMANDOS ====================
 
-Lighting.ChildAdded:Connect(function(child: Instance): ()
+Lighting.ChildAdded:Connect(function(child)
 	if isSystemEnabled then
-		task.defer(function(): ()
+		task.defer(function()
 			if child:IsA("BloomEffect")
 				or child:IsA("BlurEffect")
 				or child:IsA("SunRaysEffect")
 				or child:IsA("ColorCorrectionEffect")
 				or child:IsA("DepthOfFieldEffect") then
-				child:Destroy()
+				pcall(function() child:Destroy() end)
 			elseif child:IsA("Atmosphere") then
 				setNoFog()
 			end
@@ -386,10 +400,12 @@ Lighting.ChildAdded:Connect(function(child: Instance): ()
 	end
 end)
 
-RunService.RenderStepped:Connect(function(): ()
+RunService.RenderStepped:Connect(function()
 	if isSystemEnabled then
 		setExposure()
 	end
 end)
 
+-- Iniciar sistema
+task.wait(1)
 enableSystem()
